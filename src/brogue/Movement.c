@@ -443,7 +443,7 @@ void useKeyAt(item *theItem, short x, short y) {
 short randValidDirectionFrom(creature *monst, short x, short y, boolean respectAvoidancePreferences) {
     short i, newX, newY, validDirections[8], count = 0;
 
-    brogueAssert(rogue.RNG == RNG_SUBSTANTIVE);
+    // brogueAssert(rogue.RNG == RNG_SUBSTANTIVE);
     for (i=0; i<8; i++) {
         newX = x + nbDirs[i][0];
         newY = y + nbDirs[i][1];
@@ -2181,8 +2181,10 @@ boolean explore(short frameDelay) {
 
                 // No waypoints remaining - pick random direction
                 message("Random flit", 0);
-                // fprintf(stderr, "Movement - random flit\n");
+                short oldRNG = rogue.RNG;
+                rogue.RNG = RNG_COSMETIC;
                 dir = randValidDirectionFrom(&player, player.loc.x, player.loc.y, false);
+                restoreRNG;
             } else {
                 // fprintf(stderr, "Movement - moving to waypoint\n");
             }
