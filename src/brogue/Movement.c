@@ -2057,7 +2057,6 @@ void doRandomAction() {
         }
     } else if (theItem->category & (STAFF | WAND)) {
         // Try zapping it
-        boolean b;
         switch (theItem->kind) {
             case STAFF_LIGHTNING: case STAFF_FIRE: 
             case STAFF_POISON: case STAFF_ENTRANCEMENT: 
@@ -2066,7 +2065,7 @@ void doRandomAction() {
                 if (monst != NULL) {
                     rogue.lastTarget = monst;
                     fprintf(stderr, "Movement - zapping staff\n");
-                    useStaffOrWand(theItem, &b);
+                    apply(theItem, true);
                 }
                 break;
 
@@ -2130,8 +2129,7 @@ boolean explore(short frameDelay) {
     }
 
     if (!rogue.autoPlayingLevel) {
-        message(KEYBOARD_LABELS ? "Exploring... press any key to stop." : "Exploring... touch anywhere to stop.",
-                0);
+        message(KEYBOARD_LABELS ? "Exploring... press any key to stop." : "Exploring... touch anywhere to stop.",0);
         // A little hack so the exploring message remains bright while exploring and then auto-dims when
         // another message is displayed:
         confirmMessages();
@@ -2174,6 +2172,8 @@ boolean explore(short frameDelay) {
 
         // Nowhere to go, pick a random waypoint
         if (dir == NO_DIRECTION) {
+            short oldRNG = rogue.RNG;
+            rogue.RNG = RNG_COSMETIC;
             dir = nextStep(rogue.wpDistance[player.targetWaypointIndex], player.loc.x, player.loc.y, &player, false);
             if (dir == NO_DIRECTION) {
                 player.waypointAlreadyVisited[player.targetWaypointIndex] = true;
@@ -2181,13 +2181,11 @@ boolean explore(short frameDelay) {
 
                 // No waypoints remaining - pick random direction
                 message("Random flit", 0);
-                short oldRNG = rogue.RNG;
-                rogue.RNG = RNG_COSMETIC;
                 dir = randValidDirectionFrom(&player, player.loc.x, player.loc.y, false);
-                restoreRNG;
             } else {
                 // fprintf(stderr, "Movement - moving to waypoint\n");
             }
+            restoreRNG;
         }
 
         if (dir == NO_DIRECTION) {
