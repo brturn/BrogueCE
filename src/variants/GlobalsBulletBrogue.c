@@ -1054,6 +1054,7 @@ const gameConstants bulletBrogueGameConst = {
     .weaponKillsToAutoID = 2,
     .armorDelayToAutoID = 120,
     .ringDelayToAutoID = 120,
+    .cursedDuration = 120,
 
     .fallDamageMin = 8,
     .fallDamageMax = 10,

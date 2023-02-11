@@ -1818,4 +1818,6 @@ const statusEffect statusEffectCatalog[NUMBER_OF_STATUS_EFFECTS] = {
     {"Lifespan",        false, 0}, // STATUS_LIFESPAN_REMAINING
     {"Shielded",        true,  0}, // STATUS_SHIELDED
     {"Invisible",       true,  0}, // STATUS_INVISIBLE
+    {"",                false, 0}, // STATUS_AGGRAVATING
+    {"Cursed",          false, 1}, // STATUS_CURSED
 };

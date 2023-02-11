@@ -2015,6 +2015,7 @@ enum statusEffects {
     STATUS_SHIELDED,
     STATUS_INVISIBLE,
     STATUS_AGGRAVATING,
+    STATUS_CURSED,
     NUMBER_OF_STATUS_EFFECTS,
 };
 
@@ -2404,6 +2405,7 @@ typedef struct gameConstants {
     const int weaponKillsToAutoID;                  // number of kills until unknown weapon is IDed
     const int armorDelayToAutoID;                   // number of turns until unknown armor is IDed
     const int ringDelayToAutoID;                    // number of turns until unknown ring is IDed
+    const int cursedDuration;                       // number of turns added to the curse each time an item is equipped
 
     const int numberAutogenerators;                 // size of autoGeneratorCatalog table
     const int numberBoltKinds;                      // size of boltKinds table

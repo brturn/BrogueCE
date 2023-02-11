@@ -7017,6 +7017,7 @@ boolean readScroll(item *theItem) {
                 hadEffect |= uncurse(tempItem);
             }
             if (hadEffect) {
+                player.status[STATUS_CURSED] = 0;
                 message("your pack glows with a cleansing light, and a malevolent energy disperses.", 0);
             } else {
                 message("your pack glows with a cleansing light, but nothing happens.", 0);
@@ -7797,6 +7798,8 @@ boolean equipItem(item *theItem, boolean force, item *unequipHint) {
                     break;
             }
             messageWithColor(buf1, &itemMessageColor, 0);
+            player.status[STATUS_CURSED] += CURSED_ITEM_DURATION;
+            player.maxStatus[STATUS_CURSED] = player.status[STATUS_CURSED];
         }
     }
 

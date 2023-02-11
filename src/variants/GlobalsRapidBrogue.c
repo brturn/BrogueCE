@@ -1044,6 +1044,7 @@ const gameConstants rapidBrogueGameConst = {
     .weaponKillsToAutoID = 5,
     .armorDelayToAutoID = 250,
     .ringDelayToAutoID = 250,
+    .cursedDuration = 250,
 
     .fallDamageMin = 8,
     .fallDamageMax = 10,

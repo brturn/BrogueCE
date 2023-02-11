@@ -1040,6 +1040,7 @@ const gameConstants brogueGameConst = {
     .weaponKillsToAutoID = 20,
     .armorDelayToAutoID = 1000,
     .ringDelayToAutoID = 1500,
+    .cursedDuration = 1000,
 
     .fallDamageMin = 8,
     .fallDamageMax = 10,
