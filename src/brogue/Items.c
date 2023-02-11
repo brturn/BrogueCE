@@ -6422,7 +6422,7 @@ boolean useStaffOrWand(item *theItem, boolean *commandsRecorded) {
 
     pos originLoc = player.loc;
     pos zapTarget;
-    confirmedTarget = chooseTarget(&zapTarget, maxDistance, false, autoTarget,
+    confirmedTarget = rogue.autoPlayingLevel || chooseTarget(&zapTarget, maxDistance, false, autoTarget,
         targetAllies, (boltKnown ? &theBolt : &boltCatalog[BOLT_NONE]), &trajectoryHiliteColor);
     if (confirmedTarget
         && boltKnown

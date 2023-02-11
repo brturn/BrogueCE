@@ -320,11 +320,13 @@ void initializeRogue(uint64_t seed) {
     rogue.gold = 0;
     rogue.goldGenerated = 0;
     rogue.disturbed = false;
-    rogue.autoPlayingLevel = false;
+    // rogue.autoPlayingLevel = false;
+    rogue.autoPlayingLevel = true;  // BT: Force auto-player
     rogue.automationActive = false;
     rogue.justRested = false;
     rogue.justSearched = false;
     rogue.easyMode = false;
+    // rogue.easyMode = true;  // BT: Make the auto-player use easy mode to delve deeper
     rogue.inWater = false;
     rogue.creaturesWillFlashThisTurn = false;
     rogue.updatedSafetyMapThisTurn = false;
@@ -973,15 +975,31 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
     item *theItem;
     char recordingFilename[BROGUE_FILENAME_MAX] = {0};
 
+    fprintf(stderr, "RogueMain::gameOver\n");
+
     if (player.bookkeepingFlags & MB_IS_DYING) {
         // we've already been through this once; let's avoid overkill.
         return;
     }
 
     player.bookkeepingFlags |= MB_IS_DYING;
-    rogue.autoPlayingLevel = false;
+    // rogue.autoPlayingLevel = false;
     rogue.gameInProgress = false;
     flushBufferToFile();
+
+    // Auto-Play Ends with Auto-Recording Save too...
+    if (rogue.autoPlayingLevel) {
+        rogue.autoPlayingLevel = false;
+        player.currentHP = 0; // So it shows up empty in the side bar.
+        refreshSideBar(-1, -1, false);
+        rogue.creaturesWillFlashThisTurn = false;
+        rogue.highScoreSaved = true;
+        saveRecordingNoPrompt(recordingFilename);
+        // notifyEvent(GAMEOVER_DEATH, 12345, 0, "Died in vain", recordingFilename);
+        rogue.gameHasEnded = true;
+        rogue.nextGame = NG_NEW_GAME;
+        return;
+    }
 
     if (rogue.playbackFastForward) {
         rogue.playbackFastForward = false;
@@ -1027,7 +1045,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
                 displayInventory(ALL_ITEMS, 0, 0, true, false);
             }
         } while (!(theEvent.eventType == KEYSTROKE && (theEvent.param1 == ACKNOWLEDGE_KEY || theEvent.param1 == ESCAPE_KEY)
-                   || theEvent.eventType == MOUSE_UP));
+                || theEvent.eventType == MOUSE_UP));
 
         confirmMessages();
 

@@ -586,6 +586,8 @@ void mainInputLoop() {
 
     rogue.cursorLoc = (pos) { .x = -1, .y = -1 };
 
+    fprintf(stderr, "mainInputLoop BEGIN\n");
+
     while (!rogue.gameHasEnded && (!playingBack || !canceled)) { // repeats until the game ends
 
         oldRNG = rogue.RNG;
@@ -623,6 +625,10 @@ void mainInputLoop() {
         playerPathingMap[player.loc.x][player.loc.y] = 0;
         dijkstraScan(playerPathingMap, costMap, true);
         processSnapMap(cursorSnapMap);
+
+        if (rogue.autoPlayingLevel) {
+            autoPlayLevel(true);
+        } else {
 
         do {
             textDisplayed = false;
@@ -848,6 +854,7 @@ void mainInputLoop() {
                 }
             }
         }
+    }
     }
 
     rogue.playbackMode = playingBack;
@@ -2405,6 +2412,8 @@ boolean pauseBrogue(short milliseconds) {
     if (rogue.playbackMode && rogue.playbackFastForward) {
         return true;
     }
+    if (rogue.autoPlayingLevel) milliseconds = 10;
+
     // For long delays, let's pause in small increments so that we can immediately react to user interruptions.
     while (milliseconds > 100) {
         if (pauseForMilliseconds(50)) return true;

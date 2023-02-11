@@ -872,9 +872,9 @@ void flashCreatureAlert(creature *monst, char msg[200], color *foreColor, color 
     if (x > COLS - strLenWithoutEscapes(msg)) {
         x = COLS - strLenWithoutEscapes(msg);
     }
-    flashMessage(msg, x, y, (rogue.playbackMode ? 100 : 1000), foreColor, backColor);
+    flashMessage(msg, x, y, (rogue.autoPlayingLevel ? 10 : (rogue.playbackMode ? 100 : 1000)), foreColor, backColor);
     rogue.disturbed = true;
-    rogue.autoPlayingLevel = false;
+    // rogue.autoPlayingLevel = false;
 }
 
 void handleHealthAlerts() {

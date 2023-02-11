@@ -1862,6 +1862,231 @@ void getExploreMap(short **map, boolean headingToStairs) {// calculate explore m
     freeGrid(costMap);
 }
 
+
+boolean itemMatches(
+        item *theItem,
+        unsigned short categoryMask,
+        unsigned long requiredFlags, 
+        unsigned long forbiddenFlags) {
+
+    return (theItem->category & categoryMask &&
+            !(~(theItem->flags) & requiredFlags) &&
+            !(theItem->flags & forbiddenFlags));
+}
+
+item *randomMatchingPackItem(unsigned short categoryMask,
+                            unsigned long requiredFlags, 
+                            unsigned long forbiddenFlags) {
+    item *theItem;
+    short matchingItemCount;
+
+    // Count the matching items
+    matchingItemCount = numberOfMatchingPackItems(categoryMask, requiredFlags, forbiddenFlags, false);
+
+    if (matchingItemCount == 0) {
+        return NULL;
+    }
+
+    // Pick a random item
+    matchingItemCount = rand_range(1, matchingItemCount) - 1;
+
+    for (theItem = packItems->nextItem; theItem != NULL && matchingItemCount > 0; theItem = theItem->nextItem) {
+        if (itemMatches(theItem, categoryMask, requiredFlags, forbiddenFlags)) {
+            matchingItemCount--;
+        }
+    }
+    return theItem;
+}
+
+boolean useStaffOrWand(item *theItem, boolean *commandsRecorded);
+boolean isValidWanderDestination(creature *monst, short wpIndex);
+
+void upgradeArmor(item *theItem) {
+    // If the armor is better, equip it
+    if ( rogue.armor == NULL ) {
+        fprintf(stderr, "Movement::upgradeArmor -- Naked\n");
+        equip(theItem);
+    } else if (rogue.armor != NULL ) {
+        if ( (rogue.armor->kind < theItem->kind)
+            || (rogue.armor->kind == theItem->kind && netEnchant(rogue.armor) < netEnchant(theItem))) {
+            // TODO: Look at strength requirment also... 
+            // LEATHER_ARMOR, SCALE_MAIL, CHAIN_MAIL, BANDED_MAIL, SPLINT_MAIL, PLATE_MAIL,
+            fprintf(stderr, "Movement::upgradeArmor -- %d ==> %d \n", rogue.armor->kind, theItem->kind);
+            equip(theItem);
+        } else if (theItem != rogue.armor) {
+            fprintf(stderr, "Movement::upgradeArmor -- dropping inferior armor\n");
+            drop(theItem);  // Worse armor, drop it
+        }
+    }
+}
+
+void upgradeWeapon(item *theItem) {
+    // If the weapon is better, equip it
+    if ( rogue.weapon == NULL ) {
+        fprintf(stderr, "Movement::upgradeWeapon -- Unarmed\n");
+        equip(theItem);
+    } else if (rogue.weapon != NULL ) {
+        if ((rogue.weapon->kind < WAR_AXE && rogue.weapon->kind < theItem->kind)
+            || ( rogue.weapon->kind == theItem->kind && netEnchant(rogue.weapon) < netEnchant(theItem))) {
+            // TODO: Check strenth requirements
+            fprintf(stderr, "Movement::upgradeWeapon -- %d ==> %d \n", rogue.weapon->kind, theItem->kind);
+            equip(theItem);
+        } else if (theItem != rogue.weapon) {
+            fprintf(stderr, "Movement::upgradeWeapon -- dropping inferior weapon\n");
+            drop(theItem);  // Worse weapon, drop it
+        }
+
+    }
+}
+
+void doRandomAction() {
+    unsigned short category = (WEAPON|ARMOR|SCROLL|RING|POTION|STAFF|WAND|CHARM);
+    unsigned long requiredFlags = 0; // ITEM_CAN_BE_IDENTIFIED;
+    unsigned long forbiddenFlags = ITEM_EQUIPPED;
+    short newX, newY;
+    item *theItem;
+    creature *monst = NULL;
+
+    short oldRNG = rogue.RNG;
+    rogue.RNG = RNG_COSMETIC;
+    boolean dontDoIt = rand_percent(80);
+
+    // Pick a random item in the pack
+    theItem = randomMatchingPackItem(category, requiredFlags, forbiddenFlags);
+    restoreRNG;
+
+    if (theItem == NULL) {
+        return;
+    }
+
+    if (netEnchant(theItem) < 0) {
+        fprintf(stderr, "Movement - dropping cursed item\n");
+        drop(theItem);  // Need to mark it as no-pickup...?
+        return;
+    }
+
+    // HACK: Pick a creature, then pretend they were the last throw target so throw() will auto-throw
+    if (nextTargetAfter(&newX, &newY, player.loc.x, player.loc.y, 
+                        /* targetEnemies */     true,
+                        /* targetAllies */      false,
+                        /* targetItems */       false,
+                        /* targetTerrain */     false,
+                        /* requireOpenPath */   true,
+                        /* reverseDirection */  false)) {
+        monst = monsterAtLoc(newX, newY);
+        if (monst != NULL) {
+            rogue.lastTarget = monst;
+        }
+    }
+
+    if (theItem->category & WEAPON) {
+        // If the weapon is better, equip it
+        // if ( rogue.weapon == NULL || netEnchant(rogue.weapon) < netEnchant(theItem) ) {
+        //     equip(theItem);
+        // }
+        upgradeWeapon(theItem);
+    } else if (theItem->category & ARMOR) {
+        // If the armor is better, equip it
+        // if ( rogue.armor == NULL || netEnchant(rogue.armor) < netEnchant(theItem) ) {
+        //     equip(theItem);
+        // }
+        upgradeArmor(theItem);
+    } else if (theItem->category & RING) {
+        // If the ring is better, equip it
+        if (rogue.ringLeft  == NULL
+            || rogue.ringRight == NULL
+            || netEnchant(rogue.ringLeft)  < netEnchant(theItem)
+            || netEnchant(rogue.ringRight) < netEnchant(theItem)) {
+                
+            fprintf(stderr, "Movement - equip ring\n");
+            equip(theItem);
+        }
+    } else if (theItem->category & (SCROLL)) {
+        // Try applying it
+
+        switch (theItem->kind) {
+            case SCROLL_ENCHANTING:
+            case SCROLL_IDENTIFY:
+                // TODO: Requires targeting...
+                break;
+
+            case SCROLL_TELEPORT: case SCROLL_REMOVE_CURSE: 
+            case SCROLL_RECHARGING: case SCROLL_PROTECT_ARMOR: 
+            case SCROLL_PROTECT_WEAPON: case SCROLL_SANCTUARY: 
+            case SCROLL_MAGIC_MAPPING: case SCROLL_NEGATION: 
+            case SCROLL_SHATTERING: case SCROLL_DISCORD:
+                if (dontDoIt) return;
+                fprintf(stderr, "Movement - reading scroll\n");
+                apply(theItem, true);
+                break;
+
+            case SCROLL_AGGRAVATE_MONSTER:
+            case SCROLL_SUMMON_MONSTER:
+            default:
+                fprintf(stderr, "Movement - dropping bad scroll\n");
+                drop(theItem);  // Need to mark it as no-pickup...?
+                break;
+        }
+    } else if (theItem->category & (CHARM)) {
+        // Try applying it
+        if (dontDoIt) return;
+        fprintf(stderr, "Movement - applying charm\n");
+        apply(theItem, true);
+    } else if (theItem->category & POTION) {
+        // Drink or throw?
+        switch (theItem->kind) {
+            case POTION_LIFE: case POTION_STRENGTH: 
+                fprintf(stderr, "Movement - drinking life/strength potion\n");
+                apply(theItem, true);   // Always drink immediately
+                break;
+            case POTION_TELEPATHY: case POTION_LEVITATION: 
+            case POTION_DETECT_MAGIC: case POTION_HASTE_SELF: 
+            case POTION_FIRE_IMMUNITY: case POTION_INVISIBILITY:
+                if (dontDoIt) return;
+                fprintf(stderr, "Movement - drinking potion\n");
+                apply(theItem, true);
+                break;
+            default:
+                if (dontDoIt) return;
+                if (monst != NULL) {
+                    rogue.lastTarget = monst;
+                    fprintf(stderr, "Movement - throwing potion\n");
+                    throwCommand(theItem, /* autoThrow */ true);
+                }
+                break;
+        }
+    } else if (theItem->category & (STAFF | WAND)) {
+        // Try zapping it
+        boolean b;
+        switch (theItem->kind) {
+            case STAFF_LIGHTNING: case STAFF_FIRE: 
+            case STAFF_POISON: case STAFF_ENTRANCEMENT: 
+            case STAFF_DISCORD: case STAFF_CONJURATION: 
+                if (dontDoIt) return;
+                if (monst != NULL) {
+                    rogue.lastTarget = monst;
+                    fprintf(stderr, "Movement - zapping staff\n");
+                    useStaffOrWand(theItem, &b);
+                }
+                break;
+
+            case STAFF_HEALING: 
+            case STAFF_HASTE: 
+            case STAFF_PROTECTION:
+                fprintf(stderr, "Movement - dropping bad staff\n");
+                drop(theItem);  // Need to mark it as no-pickup...?
+                break;
+
+            case STAFF_TUNNELING: 
+            case STAFF_BLINKING: 
+            case STAFF_OBSTRUCTION: 
+                // TODO: Requires targeting...
+            default:
+                break;
+        }
+    }
+}
+
 boolean explore(short frameDelay) {
     short **distanceMap;
     short path[1000][2], steps;
@@ -1878,14 +2103,14 @@ boolean explore(short frameDelay) {
     madeProgress    = false;
     headingToStairs = false;
 
-    if (player.status[STATUS_CONFUSED]) {
-        message("Not while you're confused.", 0);
-        return false;
-    }
-    if (cellHasTerrainFlag(player.loc.x, player.loc.y, T_OBSTRUCTS_PASSABILITY)) {
-        message("Not while you're trapped.", 0);
-        return false;
-    }
+    // if (player.status[STATUS_CONFUSED]) {
+    //     message("Not while you're confused.", 0);
+    //     return false;
+    // }
+    // if (cellHasTerrainFlag(player.loc.x, player.loc.y, T_OBSTRUCTS_PASSABILITY)) {
+    //     message("Not while you're trapped.", 0);
+    //     return false;
+    // }
 
     for (creatureIterator it = iterateCreatures(monsters); hasNextCreature(it);) {
         creature *monst = nextCreature(&it);
@@ -1947,20 +2172,43 @@ boolean explore(short frameDelay) {
 
         refreshSideBar(-1, -1, false);
 
+        // Nowhere to go, pick a random waypoint
+        if (dir == NO_DIRECTION) {
+            dir = nextStep(rogue.wpDistance[player.targetWaypointIndex], player.loc.x, player.loc.y, &player, false);
+            if (dir == NO_DIRECTION) {
+                player.waypointAlreadyVisited[player.targetWaypointIndex] = true;
+                player.targetWaypointIndex = min( rogue.wpCount-1, player.targetWaypointIndex+1 );
+
+                // No waypoints remaining - pick random direction
+                message("Random flit", 0);
+                // fprintf(stderr, "Movement - random flit\n");
+                dir = randValidDirectionFrom(&player, player.loc.x, player.loc.y, false);
+            } else {
+                // fprintf(stderr, "Movement - moving to waypoint\n");
+            }
+        }
+
         if (dir == NO_DIRECTION) {
             rogue.disturbed = true;
+            message("No direction to go!", 0);
         } else if (!playerMoves(dir)) {
+            message("Didn't Move!", 0);
             rogue.disturbed = true;
         } else {
+            if (rogue.gameHasEnded) {
+                rogue.disturbed = true;
+                rogue.autoPlayingLevel = false;
+            }
             madeProgress = true;
             if (pauseAnimation(frameDelay)) {
                 rogue.disturbed = true;
                 rogue.autoPlayingLevel = false;
+                message("Cancelling Auto-Explore!", 0);
             }
         }
         hilitePath(path, steps, true);
     } while (!rogue.disturbed);
-    //clearCursorPath();
+
     rogue.automationActive = false;
     refreshSideBar(-1, -1, false);
     freeGrid(distanceMap);
@@ -1978,13 +2226,22 @@ void autoPlayLevel(boolean fastForward) {
     // explore until we are not making progress
     do {
         madeProgress = explore(fastForward ? 1 : 50);
-        //refreshSideBar(-1, -1, false);
-
         if (!madeProgress && rogue.downLoc.x == player.loc.x && rogue.downLoc.y == player.loc.y) {
             useStairs(1);
             madeProgress = true;
+
+            // Reset waypoints for new level
+            player.targetWaypointIndex = 0;
+            for (int i=0; i < MAX_WAYPOINT_COUNT; i++) {
+                player.waypointAlreadyVisited[i] = false;
+            }
+        } else {
+            doRandomAction();
         }
-    } while (madeProgress && rogue.autoPlayingLevel);
+    } while (madeProgress 
+            && rogue.autoPlayingLevel
+            && !rogue.gameHasEnded
+            );
 
     confirmMessages();
 
