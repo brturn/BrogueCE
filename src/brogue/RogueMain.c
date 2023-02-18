@@ -320,13 +320,11 @@ void initializeRogue(uint64_t seed) {
     rogue.gold = 0;
     rogue.goldGenerated = 0;
     rogue.disturbed = false;
-    // rogue.autoPlayingLevel = false;
-    rogue.autoPlayingLevel = true;  // BT: Force auto-player
+    rogue.autoPlayingLevel = false;
     rogue.automationActive = false;
     rogue.justRested = false;
     rogue.justSearched = false;
     rogue.easyMode = false;
-    // rogue.easyMode = true;  // BT: Make the auto-player use easy mode to delve deeper
     rogue.inWater = false;
     rogue.creaturesWillFlashThisTurn = false;
     rogue.updatedSafetyMapThisTurn = false;
@@ -975,7 +973,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
     item *theItem;
     char recordingFilename[BROGUE_FILENAME_MAX] = {0};
 
-    fprintf(stderr, "RogueMain::gameOver\n");
+    fprintf(stderr, "RogueMain::gameOver -- %s\n", killedBy);
 
     if (player.bookkeepingFlags & MB_IS_DYING) {
         // we've already been through this once; let's avoid overkill.
@@ -989,6 +987,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
 
     // Auto-Play Ends with Auto-Recording Save too...
     if (rogue.autoPlayingLevel) {
+        fprintf(stderr, "RogueMain::gameOver -- end auto play\n");
         rogue.autoPlayingLevel = false;
         player.currentHP = 0; // So it shows up empty in the side bar.
         refreshSideBar(-1, -1, false);

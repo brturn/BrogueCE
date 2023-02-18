@@ -586,7 +586,7 @@ void mainInputLoop() {
 
     rogue.cursorLoc = (pos) { .x = -1, .y = -1 };
 
-    fprintf(stderr, "mainInputLoop BEGIN\n");
+    fprintf(stderr, "===== SEED: #%llu =====\n", (unsigned long long)rogue.seed );
 
     while (!rogue.gameHasEnded && (!playingBack || !canceled)) { // repeats until the game ends
 
@@ -625,10 +625,6 @@ void mainInputLoop() {
         playerPathingMap[player.loc.x][player.loc.y] = 0;
         dijkstraScan(playerPathingMap, costMap, true);
         processSnapMap(cursorSnapMap);
-
-        if (rogue.autoPlayingLevel) {
-            autoPlayLevel(true);
-        } else {
 
         do {
             textDisplayed = false;
@@ -854,7 +850,6 @@ void mainInputLoop() {
                 }
             }
         }
-    }
     }
 
     rogue.playbackMode = playingBack;
@@ -2649,7 +2644,8 @@ void executeKeystroke(signed long keystroke, boolean controlKey, boolean shiftKe
             exploreKey(controlKey);
             break;
         case AUTOPLAY_KEY:
-            if (confirm("Turn on autopilot?", false)) {
+            //  if (confirm("Turn on autopilot?", false)) 
+            {
                 autoPlayLevel(controlKey);
             }
             break;

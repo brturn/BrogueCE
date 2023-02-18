@@ -37,7 +37,9 @@ void playerRuns(short direction) {
     }
 
     while (!rogue.disturbed) {
-        if (!playerMoves(direction)) {
+        boolean b = playerMoves(direction);
+        if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerRuns\n");
+        if (!b) {
             rogue.disturbed = true;
             break;
         }
@@ -839,6 +841,7 @@ boolean playerMoves(short direction) {
                 message(tileCatalog[pmap[newX][newY].layers[layer]].flavorText, 0);
                 promoteTile(newX, newY, layer, false);
                 playerTurnEnded();
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (1)\n");
                 return true;
             }
         }
@@ -858,6 +861,7 @@ boolean playerMoves(short direction) {
             playerRecoversFromAttacking(true);
             moveEntrancedMonsters(direction);
             playerTurnEnded();
+            if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (2)\n");
             return true;
         } else if (specialAttackAborted) { // Canceled an attack against an acid mound.
             brogueAssert(!committed);
@@ -880,6 +884,7 @@ boolean playerMoves(short direction) {
                     freeCaptive(defender);
                     player.ticksUntilTurn += player.attackSpeed;
                     playerTurnEnded();
+                    if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (3)\n");
                     return true;
                 } else {
                     cancelKeystroke();
@@ -907,6 +912,7 @@ boolean playerMoves(short direction) {
                     if (rand_percent(25)) {
                         vomit(&player);
                         playerTurnEnded();
+                        if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (4)\n");
                         return false;
                     }
                 }
@@ -930,6 +936,7 @@ boolean playerMoves(short direction) {
                 playerRecoversFromAttacking(anyAttackHit);
                 moveEntrancedMonsters(direction);
                 playerTurnEnded();
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (5)\n");
                 return true;
             }
         }
@@ -950,6 +957,7 @@ boolean playerMoves(short direction) {
                         moveEntrancedMonsters(direction);
                         message(buf, 0);
                         playerTurnEnded();
+                        if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (6)\n");
                         return true;
                     } else {
                         sprintf(buf, "you cannot move; %s is holding your legs!", monstName);
@@ -1067,6 +1075,7 @@ boolean playerMoves(short direction) {
                 moveEntrancedMonsters(direction);
                 committed = true;
                 playerTurnEnded();
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (7)\n");
                 return true;
             } else {
                 if (!rogue.automationActive) {
@@ -1083,6 +1092,7 @@ boolean playerMoves(short direction) {
             if (rand_percent(25)) {
                 vomit(&player);
                 playerTurnEnded();
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (8)\n");
                 return true;
             }
         }
@@ -1143,6 +1153,7 @@ boolean playerMoves(short direction) {
             }
 
             playerTurnEnded();
+            if (rogue.gameHasEnded) fprintf(stderr, "Movement::playerMoves -- (9)\n");
         }
     } else if (cellHasTerrainFlag(newX, newY, T_OBSTRUCTS_PASSABILITY)) {
         i = pmap[newX][newY].layers[layerWithFlag(newX, newY, T_OBSTRUCTS_PASSABILITY)];
@@ -1512,7 +1523,9 @@ void travelRoute(short path[1000][2], short steps) {
             if (player.loc.x + nbDirs[dir][0] == path[i][0]
                 && player.loc.y + nbDirs[dir][1] == path[i][1]) {
 
-                if (!playerMoves(dir)) {
+                boolean b = playerMoves(dir);
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::travelRoute\n");
+                if (!b) {
                     rogue.disturbed = true;
                 }
                 if (pauseAnimation(25)) {
@@ -1546,8 +1559,10 @@ void travelMap(short **distanceMap) {
                 && distanceMap[newX][newY] >= 0
                 && distanceMap[newX][newY] < distanceMap[currentX][currentY]
                 && !diagonalBlocked(currentX, currentY, newX, newY, true)) {
-
-                if (!playerMoves(dir)) {
+                
+                boolean b = playerMoves(dir);
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::travelMap\n");
+                if (!b) {
                     rogue.disturbed = true;
                 }
                 if (pauseAnimation(500)) {
@@ -1590,6 +1605,7 @@ void travel(short x, short y, boolean autoConfirm) {
         for (i=0; i<4; i++) {
             if (nbDirs[i][0] == (x - player.loc.x) && nbDirs[i][1] == (y - player.loc.y)) {
                 playerMoves(i);
+                if (rogue.gameHasEnded) fprintf(stderr, "Movement::travel\n");
                 break;
             }
         }
@@ -1901,42 +1917,55 @@ item *randomMatchingPackItem(unsigned short categoryMask,
 boolean useStaffOrWand(item *theItem, boolean *commandsRecorded);
 boolean isValidWanderDestination(creature *monst, short wpIndex);
 
-void upgradeArmor(item *theItem) {
-    // If the armor is better, equip it
-    if ( rogue.armor == NULL ) {
-        fprintf(stderr, "Movement::upgradeArmor -- Naked\n");
+
+boolean upgradeEquipment(item *myItem, item *theItem, itemTable *table) {
+
+    if (myItem == theItem || theItem == NULL) return false;
+
+    // If the equipment is better, equip it
+    if ( netEnchant(theItem) < 0 ) {
+        fprintf(stderr, "Movement::upgradeEquipment -- dropping cursed %s\n", table[theItem->kind].name);
+        drop(theItem);  // Worse equipment, drop it
+        return true;
+    } else if ( myItem == NULL ) {
+        fprintf(stderr, "Movement::upgradeEquipment -- equipping %s\n", table[theItem->kind].name);
         equip(theItem);
-    } else if (rogue.armor != NULL ) {
-        if ( (rogue.armor->kind < theItem->kind)
-            || (rogue.armor->kind == theItem->kind && netEnchant(rogue.armor) < netEnchant(theItem))) {
-            // TODO: Look at strength requirment also... 
-            // LEATHER_ARMOR, SCALE_MAIL, CHAIN_MAIL, BANDED_MAIL, SPLINT_MAIL, PLATE_MAIL,
-            fprintf(stderr, "Movement::upgradeArmor -- %d ==> %d \n", rogue.armor->kind, theItem->kind);
-            equip(theItem);
-        } else if (theItem != rogue.armor) {
-            fprintf(stderr, "Movement::upgradeArmor -- dropping inferior armor\n");
-            drop(theItem);  // Worse armor, drop it
+        return true;
+    } else if (myItem != NULL ) {
+
+        boolean allowUse = (theItem->category & ARMOR)
+                        || ((theItem->category & WEAPON) && (theItem->kind <= WAR_AXE));
+        // Is this better equipment than we already have?
+        if ( (myItem->kind < theItem->kind && allowUse)
+            || (myItem->kind == theItem->kind && netEnchant(myItem) < netEnchant(theItem))) {
+
+            // Check strenth requirements
+            if (rogue.strength + 1 >= table[theItem->kind].strengthRequired) {
+                fprintf(stderr, "Movement::upgradeEquipment -- %s ==> %s \n", table[myItem->kind].name, table[theItem->kind].name);
+                equip(theItem);
+                // Cheating - make the other one cursed so we drop it
+                myItem->enchant1 = -3;
+                return true;
+            } else {
+                fprintf(stderr, "Movement::upgradeEquipment -- %s (too weak for %s)\n", table[myItem->kind].name, table[theItem->kind].name);
+                return false;
+            }
+        // } else if (theItem != myItem) {
+        //     fprintf(stderr, "Movement::upgradeEquipment -- %s (dropping %s)\n", table[myItem->kind].name, table[theItem->kind].name);
+            // drop(theItem);  // Worse or equivalent armor, drop it
+            // return true;
+
         }
     }
+    return false;
 }
 
-void upgradeWeapon(item *theItem) {
-    // If the weapon is better, equip it
-    if ( rogue.weapon == NULL ) {
-        fprintf(stderr, "Movement::upgradeWeapon -- Unarmed\n");
-        equip(theItem);
-    } else if (rogue.weapon != NULL ) {
-        if ((rogue.weapon->kind < WAR_AXE && rogue.weapon->kind < theItem->kind)
-            || ( rogue.weapon->kind == theItem->kind && netEnchant(rogue.weapon) < netEnchant(theItem))) {
-            // TODO: Check strenth requirements
-            fprintf(stderr, "Movement::upgradeWeapon -- %d ==> %d \n", rogue.weapon->kind, theItem->kind);
-            equip(theItem);
-        } else if (theItem != rogue.weapon) {
-            fprintf(stderr, "Movement::upgradeWeapon -- dropping inferior weapon\n");
-            drop(theItem);  // Worse weapon, drop it
-        }
+boolean upgradeArmor(item *theItem) {
+    return upgradeEquipment(rogue.armor, theItem, armorTable);
+}
 
-    }
+boolean upgradeWeapon(item *theItem) {
+    return upgradeEquipment(rogue.weapon, theItem, weaponTable);
 }
 
 void doRandomAction() {
@@ -1945,17 +1974,31 @@ void doRandomAction() {
     unsigned long forbiddenFlags = ITEM_EQUIPPED;
     short newX, newY;
     item *theItem;
+    item *armor;
+    item *weapon;
     creature *monst = NULL;
+    boolean didSomething = false;
+    boolean tooClose = false;
 
     short oldRNG = rogue.RNG;
     rogue.RNG = RNG_COSMETIC;
     boolean dontDoIt = rand_percent(80);
-
+    
     // Pick a random item in the pack
+    armor   = randomMatchingPackItem(ARMOR,    requiredFlags, forbiddenFlags);
+    weapon  = randomMatchingPackItem(WEAPON,   requiredFlags, forbiddenFlags);
     theItem = randomMatchingPackItem(category, requiredFlags, forbiddenFlags);
     restoreRNG;
 
-    if (theItem == NULL) {
+    if (armor != NULL) {
+        didSomething = upgradeArmor(armor);
+    }
+
+    if (!didSomething && weapon != NULL) {
+        didSomething = upgradeWeapon(weapon);
+    }
+
+    if (theItem == NULL || didSomething) {
         return;
     }
 
@@ -1976,6 +2019,9 @@ void doRandomAction() {
         monst = monsterAtLoc(newX, newY);
         if (monst != NULL) {
             rogue.lastTarget = monst;
+            // distance of 4 cells = 16
+             tooClose = ((monst->loc.x - player.loc.x) * (monst->loc.x - player.loc.x) + 
+                        (monst->loc.y - player.loc.y) * (monst->loc.y - player.loc.y)) < 17;
         }
     }
 
@@ -1984,13 +2030,13 @@ void doRandomAction() {
         // if ( rogue.weapon == NULL || netEnchant(rogue.weapon) < netEnchant(theItem) ) {
         //     equip(theItem);
         // }
-        upgradeWeapon(theItem);
+        // upgradeWeapon(theItem);
     } else if (theItem->category & ARMOR) {
         // If the armor is better, equip it
         // if ( rogue.armor == NULL || netEnchant(rogue.armor) < netEnchant(theItem) ) {
         //     equip(theItem);
         // }
-        upgradeArmor(theItem);
+        // upgradeArmor(theItem);
     } else if (theItem->category & RING) {
         // If the ring is better, equip it
         if (rogue.ringLeft  == NULL
@@ -1998,7 +2044,7 @@ void doRandomAction() {
             || netEnchant(rogue.ringLeft)  < netEnchant(theItem)
             || netEnchant(rogue.ringRight) < netEnchant(theItem)) {
                 
-            fprintf(stderr, "Movement - equip ring\n");
+            fprintf(stderr, "Movement - equip ring %s\n", ringTable[theItem->kind].name);
             equip(theItem);
         }
     } else if (theItem->category & (SCROLL)) {
@@ -2016,7 +2062,7 @@ void doRandomAction() {
             case SCROLL_MAGIC_MAPPING: case SCROLL_NEGATION: 
             case SCROLL_SHATTERING: case SCROLL_DISCORD:
                 if (dontDoIt) return;
-                fprintf(stderr, "Movement - reading scroll\n");
+                fprintf(stderr, "Movement - reading scroll %s\n", scrollTable[theItem->kind].name);
                 apply(theItem, true);
                 break;
 
@@ -2028,9 +2074,10 @@ void doRandomAction() {
                 break;
         }
     } else if (theItem->category & (CHARM)) {
+        // TODO: Don't apply charm if it is not charged
         // Try applying it
         if (dontDoIt) return;
-        fprintf(stderr, "Movement - applying charm\n");
+        fprintf(stderr, "Movement - applying charm %s\n", charmTable[theItem->kind].name);
         apply(theItem, true);
     } else if (theItem->category & POTION) {
         // Drink or throw?
@@ -2042,20 +2089,26 @@ void doRandomAction() {
             case POTION_TELEPATHY: case POTION_LEVITATION: 
             case POTION_DETECT_MAGIC: case POTION_HASTE_SELF: 
             case POTION_FIRE_IMMUNITY: case POTION_INVISIBILITY:
-                if (dontDoIt) return;
-                fprintf(stderr, "Movement - drinking potion\n");
+                if (dontDoIt) break;
+                fprintf(stderr, "Movement - drinking potion %s\n", potionTable[theItem->kind].name);
                 apply(theItem, true);
                 break;
             default:
-                if (dontDoIt) return;
+                if (dontDoIt) break;
+                if (tooClose) {
+                    fprintf(stderr, "Movement - too close to throw %s\n", potionTable[theItem->kind].name);
+                    break;
+                }
                 if (monst != NULL) {
+                    // TODO: Don't throw potions at close enemies
                     rogue.lastTarget = monst;
-                    fprintf(stderr, "Movement - throwing potion\n");
+                    fprintf(stderr, "Movement - throwing potion %s\n", potionTable[theItem->kind].name);
                     throwCommand(theItem, /* autoThrow */ true);
                 }
                 break;
         }
     } else if (theItem->category & (STAFF | WAND)) {
+        // TODO: Don't zap staff or wand if there are no charges
         // Try zapping it
         switch (theItem->kind) {
             case STAFF_LIGHTNING: case STAFF_FIRE: 
@@ -2064,7 +2117,7 @@ void doRandomAction() {
                 if (dontDoIt) return;
                 if (monst != NULL) {
                     rogue.lastTarget = monst;
-                    fprintf(stderr, "Movement - zapping staff\n");
+                    fprintf(stderr, "Movement - zapping staff %s\n", staffTable[theItem->kind].name);
                     apply(theItem, true);
                 }
                 break;
@@ -2072,7 +2125,7 @@ void doRandomAction() {
             case STAFF_HEALING: 
             case STAFF_HASTE: 
             case STAFF_PROTECTION:
-                fprintf(stderr, "Movement - dropping bad staff\n");
+                fprintf(stderr, "Movement - dropping bad staff %s\n", staffTable[theItem->kind].name);
                 drop(theItem);  // Need to mark it as no-pickup...?
                 break;
 
@@ -2192,19 +2245,22 @@ boolean explore(short frameDelay) {
             rogue.disturbed = true;
             message("No direction to go!", 0);
         } else if (!playerMoves(dir)) {
+            if (rogue.gameHasEnded) fprintf(stderr, "Movement::explore -- didn't move!\n");
             message("Didn't Move!", 0);
             rogue.disturbed = true;
         } else {
             if (rogue.gameHasEnded) {
                 rogue.disturbed = true;
                 rogue.autoPlayingLevel = false;
+                fprintf(stderr, "Movement::explore -- game has ended\n");
             }
             madeProgress = true;
-            if (pauseAnimation(frameDelay)) {
-                rogue.disturbed = true;
-                rogue.autoPlayingLevel = false;
-                message("Cancelling Auto-Explore!", 0);
-            }
+            // if (pauseAnimation(frameDelay)) {
+            //     rogue.disturbed = true;
+            //     rogue.autoPlayingLevel = false;
+            //     fprintf(stderr, "Movement::explore -- pause animation\n");
+            //     message("Cancelling Auto-Explore!", 0);
+            // }
         }
         hilitePath(path, steps, true);
     } while (!rogue.disturbed);
@@ -2225,6 +2281,7 @@ void autoPlayLevel(boolean fastForward) {
 
     // explore until we are not making progress
     do {
+        doRandomAction();
         madeProgress = explore(fastForward ? 1 : 50);
         if (!madeProgress && rogue.downLoc.x == player.loc.x && rogue.downLoc.y == player.loc.y) {
             useStairs(1);
@@ -2235,8 +2292,6 @@ void autoPlayLevel(boolean fastForward) {
             for (int i=0; i < MAX_WAYPOINT_COUNT; i++) {
                 player.waypointAlreadyVisited[i] = false;
             }
-        } else {
-            doRandomAction();
         }
     } while (madeProgress 
             && rogue.autoPlayingLevel
@@ -2245,7 +2300,12 @@ void autoPlayLevel(boolean fastForward) {
 
     confirmMessages();
 
+    if (!rogue.gameHasEnded) {
+        fprintf(stderr, "Movement::autoPlayLevel -- Something TERRIBLE has happened!\n");
+    }
+
     rogue.autoPlayingLevel = false;
+    fprintf(stderr, "Movement::autoPlayLevel -- cancel autoplay\n");
 }
 
 short directionOfKeypress(unsigned short ch) {
@@ -2300,7 +2360,9 @@ boolean startFighting(enum directions dir, boolean tillDeath) {
     rogue.blockCombatText = true;
     rogue.disturbed = false;
     do {
-        if (!playerMoves(dir)) {
+        boolean b = playerMoves(dir);
+        if (rogue.gameHasEnded) fprintf(stderr, "Movement::startFighting\n");
+        if (!b) {
             break;
         }
         if (pauseAnimation(1)) {
@@ -2451,6 +2513,8 @@ boolean useStairs(short stairDirection) {
     if (succeeded) {
         updatePlayerUnderwaterness();
     }
+
+    fprintf(stderr, "Movement::useStairs -- DEPTH: %d\n",rogue.depthLevel);
 
     return succeeded;
 }

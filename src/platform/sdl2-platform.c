@@ -153,6 +153,17 @@ static boolean pollBrogueEvent(rogueEvent *returnEvent, boolean textInput) {
     SDL_Event event;
     boolean ret = false;
 
+    // if (   rogue.gameInProgress
+    //    && !rogue.autoPlayingLevel
+    //    && !rogue.gameHasEnded
+    //    ) {
+    //     fprintf(stderr, "------ FORCING AUTOPLAY ------\n");
+    //     returnEvent->eventType = KEYSTROKE;
+    //     returnEvent->param1 = AUTOPLAY_KEY;
+    //     returnEvent->param2 = 0;
+    //     returnEvent->shiftKey = returnEvent->controlKey = false;
+    //     return true;
+    // }
 
     // ~ for (int i=0; i < 100 && SDL_PollEvent(&event); i++) {
     while (SDL_PollEvent(&event)) {

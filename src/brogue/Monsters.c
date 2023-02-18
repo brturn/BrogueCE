@@ -2450,6 +2450,11 @@ boolean generallyValidBoltTarget(creature *caster, creature *target) {
         // Can't target yourself; that's the fundamental theorem of Brogue bolts.
         return false;
     }
+    if (target == &player
+        && !playerCanSee(caster->loc.x, caster->loc.y)) {
+        fprintf(stderr, "Monsters::generallyValidBoltTarget - skipping unfair asymmetric LOS\n");
+        return false;
+    }
     if (caster->status[STATUS_DISCORDANT]
         && caster->creatureState == MONSTER_WANDERING
         && target == &player) {
