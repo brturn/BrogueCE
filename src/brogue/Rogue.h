@@ -182,6 +182,7 @@ typedef struct pos {
 #define WEAPON_KILLS_TO_AUTO_ID 20
 #define ARMOR_DELAY_TO_AUTO_ID  1000
 #define RING_DELAY_TO_AUTO_ID   1500
+#define CURSED_ITEM_DURATION    1000
 
 #define FALL_DAMAGE_MIN         8
 #define FALL_DAMAGE_MAX         10
@@ -1960,6 +1961,7 @@ enum statusEffects {
     STATUS_SHIELDED,
     STATUS_INVISIBLE,
     STATUS_AGGRAVATING,
+    STATUS_CURSED,
     NUMBER_OF_STATUS_EFFECTS,
 };
 
@@ -2758,7 +2760,7 @@ extern "C" {
                          boolean superpriority);
     boolean spawnDungeonFeature(short x, short y, dungeonFeature *feat, boolean refreshCell, boolean abortIfBlocking);
     void restoreMonster(creature *monst, short **mapToStairs, short **mapToPit);
-    void restoreItem(item *theItem);
+    void restoreItems();
     void refreshWaypoint(short wpIndex);
     void setUpWaypoints();
     void zeroOutGrid(char grid[DCOLS][DROWS]);
