@@ -3849,37 +3849,31 @@ void haste(creature *monst, short turns) {
     }
 }
 
+void healStatus(creature *monst, short status, short minStatus, short percent) {
+    short amount = max(1, percent * player.maxStatus[status] / 100);
+    short newStatus = monst->status[status] - amount;
+    monst->status[status] = min( monst->status[status], max( minStatus, newStatus ));
+}
+
 void heal(creature *monst, short percent, boolean panacea) {
     char buf[COLS], monstName[COLS];
-    monst->currentHP = min(monst->info.maxHP, monst->currentHP + percent * monst->info.maxHP / 100);
+    short amount = max(1, percent * monst->info.maxHP / 100);
+    monst->currentHP = min(monst->info.maxHP, monst->currentHP + amount);
     if (panacea) {
-        if (monst->status[STATUS_HALLUCINATING] > 1) {
-            monst->status[STATUS_HALLUCINATING] = 1;
-        }
-        if (monst->status[STATUS_CONFUSED] > 1) {
-            monst->status[STATUS_CONFUSED] = 1;
-        }
-        if (monst->status[STATUS_NAUSEOUS] > 1) {
-            monst->status[STATUS_NAUSEOUS] = 1;
-        }
-        if (monst->status[STATUS_SLOWED] > 1) {
-            monst->status[STATUS_SLOWED] = 1;
-        }
-        if (monst->status[STATUS_WEAKENED] > 1) {
-            monst->weaknessAmount = 0;
-            monst->status[STATUS_WEAKENED] = 0;
-            updateEncumbrance();
-        }
-        if (monst->status[STATUS_POISONED]) {
-            monst->poisonAmount = 0;
-            monst->status[STATUS_POISONED] = 0;
-        }
-        if (monst->status[STATUS_DARKNESS] > 0) {
-            monst->status[STATUS_DARKNESS] = 0;
-            if (monst == &player) {
-                updateMinersLightRadius();
-                updateVision(true);
-            }
+        healStatus( monst, STATUS_HALLUCINATING, 1, percent );
+        healStatus( monst, STATUS_CONFUSED,      1, percent );
+        healStatus( monst, STATUS_NAUSEOUS,      1, percent );
+        healStatus( monst, STATUS_SLOWED,        1, percent );
+        healStatus( monst, STATUS_WEAKENED,      0, percent );
+        healStatus( monst, STATUS_POISONED,      0, percent );
+        healStatus( monst, STATUS_DARKNESS,      0, percent );
+
+        monst->poisonAmount   = monst->status[STATUS_POISONED] > 0 ? monst->poisonAmount   : 0;
+        monst->weaknessAmount = monst->status[STATUS_WEAKENED] > 0 ? monst->weaknessAmount : 0;
+        updateEncumbrance();
+        if (monst == &player) {
+            updateMinersLightRadius();
+            updateVision(true);
         }
     }
     if (canDirectlySeeMonster(monst)
@@ -6850,6 +6844,22 @@ void magicMapCell(short x, short y) {
     }
 }
 
+boolean uncurse( item *theItem ) {
+    if (theItem->flags & ITEM_CURSED) {
+
+        // Uncurse the item
+        theItem->flags &= ~ITEM_CURSED;
+
+        // Also reduce curse duration if it is equipped
+        if (theItem->flags & ITEM_EQUIPPED) {
+            // Need to leave 1 tick on the status in case multiple cursed items contributed to the debuf
+            player.status[STATUS_CURSED] = max( 1, player.status[STATUS_CURSED] - CURSED_ITEM_DURATION );
+        }
+        return true;
+    }
+    return false;
+}
+
 void readScroll(item *theItem) {
     short i, j, x, y, numberOfMonsters = 0;
     item *tempItem;
@@ -6894,12 +6904,10 @@ void readScroll(item *theItem) {
             break;
         case SCROLL_REMOVE_CURSE:
             for (tempItem = packItems->nextItem; tempItem != NULL; tempItem = tempItem->nextItem) {
-                if (tempItem->flags & ITEM_CURSED) {
-                    hadEffect = true;
-                    tempItem->flags &= ~ITEM_CURSED;
-                }
+                hadEffect |= uncurse(tempItem);
             }
             if (hadEffect) {
+                player.status[STATUS_CURSED] = 0;
                 message("your pack glows with a cleansing light, and a malevolent energy disperses.", 0);
             } else {
                 message("your pack glows with a cleansing light, but nothing happens.", 0);
@@ -6978,10 +6986,9 @@ void readScroll(item *theItem) {
             itemName(theItem, buf, false, false, NULL);
             sprintf(buf2, "your %s gleam%s briefly in the darkness.", buf, (theItem->quantity == 1 ? "s" : ""));
             messageWithColor(buf2, &itemMessageColor, 0);
-            if (theItem->flags & ITEM_CURSED) {
+            if (uncurse(theItem)) {
                 sprintf(buf2, "a malevolent force leaves your %s.", buf);
                 messageWithColor(buf2, &itemMessageColor, 0);
-                theItem->flags &= ~ITEM_CURSED;
             }
             createFlare(player.loc.x, player.loc.y, SCROLL_ENCHANTMENT_LIGHT);
             break;
@@ -6995,10 +7002,9 @@ void readScroll(item *theItem) {
                 itemName(tempItem, buf2, false, false, NULL);
                 sprintf(buf, "a protective golden light covers your %s.", buf2);
                 messageWithColor(buf, &itemMessageColor, 0);
-                if (tempItem->flags & ITEM_CURSED) {
+                if (uncurse(tempItem)) {
                     sprintf(buf, "a malevolent force leaves your %s.", buf2);
                     messageWithColor(buf, &itemMessageColor, 0);
-                    tempItem->flags &= ~ITEM_CURSED;
                 }
             } else {
                 message("a protective golden light surrounds you, but it quickly disperses.", 0);
@@ -7012,10 +7018,9 @@ void readScroll(item *theItem) {
                 itemName(tempItem, buf2, false, false, NULL);
                 sprintf(buf, "a protective golden light covers your %s.", buf2);
                 messageWithColor(buf, &itemMessageColor, 0);
-                if (tempItem->flags & ITEM_CURSED) {
+                if (uncurse(tempItem)) {
                     sprintf(buf, "a malevolent force leaves your %s.", buf2);
                     messageWithColor(buf, &itemMessageColor, 0);
-                    tempItem->flags &= ~ITEM_CURSED;
                 }
                 if (rogue.weapon->quiverNumber) {
                     rogue.weapon->quiverNumber = rand_range(1, 60000);
@@ -7649,6 +7654,8 @@ boolean equipItem(item *theItem, boolean force, item *unequipHint) {
                     break;
             }
             messageWithColor(buf1, &itemMessageColor, 0);
+            player.status[STATUS_CURSED] += CURSED_ITEM_DURATION;
+            player.maxStatus[STATUS_CURSED] = player.status[STATUS_CURSED];
         }
     }
 
