@@ -567,6 +567,8 @@ void mainInputLoop() {
 
     rogue.cursorLoc = INVALID_POS;
 
+    fprintf(stderr, "===== SEED: #%llu =====\n", (unsigned long long)rogue.seed );
+
     while (!rogue.gameHasEnded && (!playingBack || !canceled)) { // repeats until the game ends
 
         oldRNG = rogue.RNG;
@@ -691,26 +693,30 @@ void mainInputLoop() {
                 printLocationDescription(rogue.cursorLoc.x, rogue.cursorLoc.y);
             }
 
-            // Get the input!
-            rogue.playbackMode = playingBack;
-            doEvent = moveCursor(&targetConfirmed, &canceled, &tabKey, &rogue.cursorLoc, &theEvent, &state, !textDisplayed, rogue.cursorMode, true);
-            rogue.playbackMode = false;
+            if (rogue.robotPlayer) {
+                autoPlayLevel(true);
+            } else {
+                // Get the input!
+                rogue.playbackMode = playingBack;
+                doEvent = moveCursor(&targetConfirmed, &canceled, &tabKey, &rogue.cursorLoc, &theEvent, &state, !textDisplayed, rogue.cursorMode, true);
+                rogue.playbackMode = false;
 
-            if (state.buttonChosen == 3) { // Actions menu button.
-                buttonInput = actionMenu(buttons[3].x - 4, playingBack); // Returns the corresponding keystroke.
-                if (buttonInput == -1) { // Canceled.
-                    doEvent = false;
-                } else {
+                if (state.buttonChosen == 3) { // Actions menu button.
+                    buttonInput = actionMenu(buttons[3].x - 4, playingBack); // Returns the corresponding keystroke.
+                    if (buttonInput == -1) { // Canceled.
+                        doEvent = false;
+                    } else {
+                        theEvent.eventType = KEYSTROKE;
+                        theEvent.param1 = buttonInput;
+                        theEvent.param2 = 0;
+                        theEvent.shiftKey = theEvent.controlKey = false;
+                        doEvent = true;
+                    }
+                } else if (state.buttonChosen > -1) {
                     theEvent.eventType = KEYSTROKE;
-                    theEvent.param1 = buttonInput;
+                    theEvent.param1 = buttons[state.buttonChosen].hotkey[0];
                     theEvent.param2 = 0;
-                    theEvent.shiftKey = theEvent.controlKey = false;
-                    doEvent = true;
                 }
-            } else if (state.buttonChosen > -1) {
-                theEvent.eventType = KEYSTROKE;
-                theEvent.param1 = buttons[state.buttonChosen].hotkey[0];
-                theEvent.param2 = 0;
             }
             state.buttonChosen = -1;
 
@@ -2379,6 +2385,7 @@ boolean pauseBrogue(short milliseconds, PauseBehavior behavior) {
     if (rogue.playbackMode && rogue.playbackFastForward) {
         return true;
     }
+    if (rogue.robotPlayer) milliseconds = 10;
     // For long delays, let's pause in small increments so that we can immediately react to user interruptions.
     while (milliseconds > 100) {
         if (pauseForMilliseconds(50, behavior)) return true;
@@ -2614,7 +2621,8 @@ void executeKeystroke(signed long keystroke, boolean controlKey, boolean shiftKe
             exploreKey(controlKey);
             break;
         case AUTOPLAY_KEY:
-            if (confirm("Turn on autopilot?", false)) {
+            if (rogue.robotPlayer || confirm("Turn on autopilot?", false)) {
+                rogue.robotPlayer = true;
                 autoPlayLevel(controlKey);
             }
             break;

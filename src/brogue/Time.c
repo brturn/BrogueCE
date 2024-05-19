@@ -172,7 +172,7 @@ void applyInstantTileEffectsToCreature(creature *monst) {
             sprintf(buf, "you plunge into %s!",
                     tileCatalog[pmap[*x][*y].layers[layerWithFlag(*x, *y, T_LAVA_INSTA_DEATH)]].description);
             message(buf, REQUIRE_ACKNOWLEDGMENT);
-            sprintf(buf, "Killed by %s",
+            sprintf(buf, "(1) Killed by %s",
                     tileCatalog[pmap[*x][*y].layers[layerWithFlag(*x, *y, T_LAVA_INSTA_DEATH)]].description);
             gameOver(buf, true);
             return;
@@ -315,7 +315,7 @@ void applyInstantTileEffectsToCreature(creature *monst) {
             } else if (inflictDamage(NULL, &player, damage, &yellow, false)) {
                 killCreature(&player, false);
                 strcpy(buf2, tileCatalog[pmap[*x][*y].layers[layerWithFlag(*x, *y, T_CAUSES_EXPLOSIVE_DAMAGE)]].description);
-                sprintf(buf, "Killed by %s", buf2);
+                sprintf(buf, "(2) Killed by %s", buf2);
                 gameOver(buf, true);
                 return;
             }
@@ -512,7 +512,7 @@ static void applyGradualTileEffectsToCreature(creature *monst, short ticks) {
                 messageWithColor(tileCatalog[pmap[x][y].layers[layer]].flavorText, &badMessageColor, 0);
                 if (inflictDamage(NULL, &player, damage, tileCatalog[pmap[x][y].layers[layer]].backColor, true)) {
                     killCreature(&player, false);
-                    sprintf(buf, "Killed by %s", tileCatalog[pmap[x][y].layers[layer]].description);
+                    sprintf(buf, "(3) Killed by %s", tileCatalog[pmap[x][y].layers[layer]].description);
                     gameOver(buf, true);
                     return;
                 }
@@ -873,9 +873,9 @@ static void flashCreatureAlert(creature *monst, char msg[200], const color *fore
     if (x > COLS - strLenWithoutEscapes(msg)) {
         x = COLS - strLenWithoutEscapes(msg);
     }
-    flashMessage(msg, x, y, (rogue.playbackMode ? 100 : 1000), foreColor, backColor);
+    flashMessage(msg, x, y, (rogue.autoPlayingLevel ? 10 : (rogue.playbackMode ? 100 : 1000)), foreColor, backColor);
     rogue.disturbed = true;
-    rogue.autoPlayingLevel = false;
+    rogue.autoPlayingLevel = rogue.robotPlayer;
 }
 
 static void handleHealthAlerts() {

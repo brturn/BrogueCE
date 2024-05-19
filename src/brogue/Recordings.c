@@ -46,6 +46,7 @@ static void recordChar(unsigned char c) {
         recordingLocation++;
     } else {
         printf("Recording buffer length exceeded at location %li! Turn number %li.\n", recordingLocation - 1, rogue.playerTurnNumber);
+        exit(0);
     }
 }
 

@@ -438,26 +438,24 @@ static void chooseGameMode() {
     append(textBuf, tmpBuf, TEXT_MAX_LENGTH);
     append(textBuf, "Play as an invincible wizard that starts with legendary items and is magically reborn after every "
                     "death. Summon monsters and make them friend or foe. Conjure any item out of thin air. "
-                    "(Your score is not saved.)", TEXT_MAX_LENGTH);
+                    "(Your score is not saved.)\n\n", TEXT_MAX_LENGTH);
 
-    brogueButton buttons[3];
+    snprintf(tmpBuf, TEXT_MAX_LENGTH, "%sRobot Mode%s\n", goldColorEscape, whiteColorEscape);
+    append(textBuf, tmpBuf, TEXT_MAX_LENGTH);
+    append(textBuf, "Robot player auto-explores the dungeons forever.  Must Quit Brogue to exit.", TEXT_MAX_LENGTH);
+
+
+    brogueButton buttons[4];
     initializeMainMenuButton(&(buttons[0]), "      %sW%sizard       ", 'w', 'W', NG_NOTHING);
     initializeMainMenuButton(&(buttons[1]), "       %sE%sasy        ", 'e', 'E', NG_NOTHING);
     initializeMainMenuButton(&(buttons[2]), "      %sN%sormal       ", 'n', 'N', NG_NOTHING);
+    initializeMainMenuButton(&(buttons[3]), "      %sR%sobot        ", 'r', 'R', NG_NOTHING);
     const SavedDisplayBuffer rbuf = saveDisplayBuffer();
-    gameMode = printTextBox(textBuf, 10, 5, 66, &white, &black, buttons, 3);
+    gameMode = printTextBox(textBuf, 10, 5, 66, &white, &black, buttons, 4);
     restoreDisplayBuffer(&rbuf);
-    if (gameMode == 0) {
-        rogue.wizard = true;
-        rogue.easyMode = false;
-    } else if (gameMode == 1) {
-        rogue.wizard = false;
-        rogue.easyMode = true;
-    } else if (gameMode == 2) {
-        rogue.wizard = false;
-        rogue.easyMode = false;
-    }
-
+    rogue.wizard = gameMode == 0;
+    rogue.easyMode = gameMode == 1;
+    rogue.robotPlayer = gameMode == 3;
     rogue.nextGame = NG_NOTHING;
 }
 

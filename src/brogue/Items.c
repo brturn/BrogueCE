@@ -6486,7 +6486,7 @@ static boolean useStaffOrWand(item *theItem, boolean *commandsRecorded) {
 
     pos originLoc = player.loc;
     pos zapTarget;
-    confirmedTarget = chooseTarget(&zapTarget, maxDistance, false, autoTarget,
+    confirmedTarget = rogue.robotPlayer || rogue.autoPlayingLevel || chooseTarget(&zapTarget, maxDistance, false, autoTarget,
         targetAllies, (boltKnown ? &theBolt : &boltCatalog[BOLT_NONE]), &trajectoryHiliteColor);
     if (confirmedTarget
         && boltKnown
@@ -7684,7 +7684,7 @@ boolean equipItem(item *theItem, boolean force, item *unequipHint) {
                     break;
             }
             messageWithColor(buf1, &itemMessageColor, 0);
-            player.status[STATUS_CURSED] += CURSED_ITEM_DURATION;
+            player.status[STATUS_CURSED] += gameConst->curseDuration;
             player.maxStatus[STATUS_CURSED] = player.status[STATUS_CURSED];
         }
     }

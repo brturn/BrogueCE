@@ -2404,6 +2404,7 @@ typedef struct playerCharacter {
     boolean highScoreSaved;             // so that it saves the high score only once
     boolean blockCombatText;            // busy auto-fighting
     boolean autoPlayingLevel;           // seriously, don't interrupt
+    boolean robotPlayer;                // never interrupt
     boolean automationActive;           // cut some corners during redraws to speed things up
     boolean justRested;                 // previous turn was a rest -- used in stealth
     boolean justSearched;               // previous turn was a search -- used in manual searches

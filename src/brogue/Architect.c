@@ -3822,3 +3822,211 @@ boolean randomMatchingLocation(pos* loc, short dungeonType, short liquidType, sh
     }
     return true;
 }
+
+
+item *createItem( int16_t category, int16_t kind, int16_t enchant, int16_t runic ) {
+    item *theItem = generateItem(category, kind);
+
+    if (runic < 0) runic = 0;
+    if (enchant < 0) theItem->flags |= ITEM_CURSED;
+    switch (category) {
+        case WEAPON:
+            theItem->enchant1 = enchant;
+            theItem->enchant2 = runic;
+            if (runic > 0) theItem->flags |= ITEM_RUNIC;
+            break;
+        case ARMOR:
+            theItem->enchant1 = enchant;
+            theItem->enchant2 = runic;
+            if (runic > 0) theItem->flags |= ITEM_RUNIC;
+            break;
+        case STAFF:
+            theItem->enchant1 = abs(enchant);
+            theItem->charges = abs(enchant);
+            break;
+        case WAND:
+            theItem->charges = abs(enchant);
+            break;
+        case RING:
+            theItem->enchant1 = enchant;
+            break;
+        case CHARM:
+            theItem->enchant1 = abs(enchant);
+            theItem->flags &= ~ITEM_CURSED;
+            break;
+        case GOLD:
+            theItem->quantity = abs(enchant);
+            theItem->flags &= ~ITEM_CURSED;
+            break;
+        case SCROLL:
+        case POTION:
+        default:
+            theItem->flags &= ~ITEM_CURSED;
+            break;
+    }
+    return theItem;
+}
+
+void insertItem( short x, short y, item *theItem ) {
+    theItem->loc.x = x;
+    theItem->loc.y = y;
+
+    theItem->spawnTurnNumber = 0; //rogue.absoluteTurnNumber;
+    theItem->flags |= ITEM_PREPLACED;
+    identify(theItem);
+
+    addItemToChain(theItem, floorItems);
+
+    // Add to level items
+    theItem->nextItem = levels[rogue.depthLevel-1].items;
+    levels[rogue.depthLevel-1].items = theItem;
+}
+
+
+typedef struct reverseItemEntry {
+    char *name;
+    enum itemCategory category;
+    itemTable *table;
+    short numKinds;
+} reverseItemEntry;
+
+
+reverseItemEntry *categoryNameToEntry( char *name ) {
+
+    reverseItemEntry reverseTable[NUMBER_ITEM_CATEGORIES] = {
+        { "food",       FOOD,   foodTable,   NUMBER_FOOD_KINDS,   },
+        { "weapon",     WEAPON, weaponTable, NUMBER_WEAPON_KINDS, },
+        { "armor",      ARMOR,  armorTable,  NUMBER_ARMOR_KINDS,  },
+        { "potion",     POTION, potionTable, gameConst->numberPotionKinds, },
+        { "scroll",     SCROLL, scrollTable, gameConst->numberScrollKinds, },
+        { "staff",      STAFF,  staffTable,  NUMBER_STAFF_KINDS,  },
+        { "wand",       WAND,   wandTable,   gameConst->numberWandKinds,   },
+        { "ring",       RING,   ringTable,   NUMBER_RING_KINDS,   },
+        { "charm",      CHARM,  charmTable,  gameConst->numberCharmKinds,  },
+        { "gold",       GOLD,   NULL,        0,                   },
+        { "amulet",     AMULET, NULL,        0,                   },
+        { "lumenstone", GEM,    NULL,        0,                   },
+        { "key",        KEY,    keyTable,    NUMBER_KEY_TYPES,    },
+    };
+
+    if (name == NULL) return NULL;
+    for (int16_t i = 0; i < NUMBER_ITEM_CATEGORIES; i++) {
+        if (strcmp(name, reverseTable[i].name) == 0)
+            return &reverseTable[i];
+    }
+    return NULL;
+}
+
+int16_t kindNameToKindId( char *name, int16_t numKinds, itemTable *table ) {
+    if (table == NULL || name == NULL) return -1;
+    for (int16_t i = 0; i < numKinds; i++) {
+        if (strcmp(name, table[i].name) == 0)
+            return i;
+    }
+    return -1;
+}
+
+int16_t weaponRunicNameToRunicId( char *name ) {
+    if (name == NULL) return 0;
+    for (int16_t i = 0; i < NUMBER_WEAPON_RUNIC_KINDS; i++) {
+        if (strcmp(name, weaponRunicNames[i]) == 0)
+            return i;
+    }
+    return 0;
+}
+
+int16_t armorRunicNameToRunicId( char *name ) {
+    if (name == NULL) return 0;
+    for (int16_t i = 0; i < NUMBER_ARMOR_ENCHANT_KINDS; i++) {
+        if (strcmp(name, armorRunicNames[i]) == 0)
+            return i;
+    }
+    return 0;
+}
+
+item *parseObject( char *txt ) {
+    // Example objects:
+    //   "staff lightning 3"
+    //   "food"
+    //   "armor reprisal -3"
+    //   "potion "
+
+    char category[64] = "";
+    char kind[64]     = "";
+    char enchant[64]  = "";
+    char runic[64]    = "";
+
+    sscanf(txt,"%s,%s,%s,%s\n", category, kind, enchant, runic);  // TODO: unsafe!
+
+    // Find the category name
+    reverseItemEntry *entry = categoryNameToEntry( category );
+    if (entry == NULL) return NULL;
+
+    int16_t kindId = kindNameToKindId( kind, entry->numKinds, entry->table );
+    int16_t enchantNum = 0;
+    int16_t runicId = 0;
+    sscanf( enchant, "%hd", &enchantNum );
+    if (entry->category == WEAPON) runicId = weaponRunicNameToRunicId(runic);
+    if (entry->category == ARMOR)  runicId = armorRunicNameToRunicId(runic);
+    return createItem( entry->category, kindId, enchantNum, runicId);
+}
+
+void readVaultFile(short **grid) {
+    unsigned long count;
+    char fileBuffer[1024];
+    char line[512];
+    FILE *file;
+    char *walk = fileBuffer;
+    short i,j,x,y,width,height=0;
+    item *theItem = NULL;
+
+    fprintf(stderr, "Reading vault file\n" );
+
+    // Read the file into memory
+    file = fopen("vault.txt", "rb");
+    do {
+        count = fread((void *) walk, 1, 1000, file);
+        walk += count;
+    } while (count > 0);
+    fclose(file);
+
+    // Count lines
+    walk = fileBuffer;
+    while (*(walk++) != 0) {
+        if (*walk == '\n') height++;
+    }
+    height = min( DROWS-4, height );    // Cut it short if it's too tall
+    fprintf(stderr, "HEIGHT: %d\n", height );
+
+    // Draw the room onto the grid
+    y = DROWS - height - 2;
+    j = y;
+    walk = fileBuffer;
+    do {
+        line[0] = 0;
+        sscanf(walk,"%s\n", line);
+        width = strlen(line);
+        walk += width + 1;
+
+        fprintf(stderr, "LINE: %s (%d)\n", line, width );
+
+        // Copy room to grid
+        width = min( DCOLS-1, width );    // Cut it short if it's too wide
+        x = DCOLS/2 - width/2 - 1;
+        for (i=x; i < x+width; i++) {
+            switch (line[i-x]) {
+                case '#':   grid[i][j] = 0; break;  // 0 denotes granite
+                case ' ':   grid[i][j] = 1; break;  // 1 denotes floor
+                case '+':   grid[i][j] = 2; break;  // 2 denotes a possible door site
+                case 'X':   grid[i][j] = -1; break; // -1 denotes off-limits areas
+                default:
+                    grid[i][j] = 1;  // 1 denotes floor
+                    theItem = parseObject(line);
+                    insertItem(i,j,theItem);
+                    break;
+            }
+        }
+        j++;
+    } while ( width > 0 );
+    fprintf(stderr, "END\n" );
+}

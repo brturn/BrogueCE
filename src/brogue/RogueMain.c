@@ -186,7 +186,7 @@ void initializeRogue(uint64_t seed) {
     short i, j, k;
     item *theItem;
     boolean playingback, playbackFF, playbackPaused, wizard, easy, displayStealthRangeMode;
-    boolean trueColorMode;
+    boolean trueColorMode, robotPlayer;
     short oldRNG;
     char currentGamePath[BROGUE_FILENAME_MAX];
 
@@ -194,6 +194,7 @@ void initializeRogue(uint64_t seed) {
     playbackPaused = rogue.playbackPaused;
     playbackFF = rogue.playbackFastForward;
     wizard = rogue.wizard;
+    robotPlayer = rogue.robotPlayer;
     easy = rogue.easyMode;
     displayStealthRangeMode = rogue.displayStealthRangeMode;
     trueColorMode = rogue.trueColorMode;
@@ -376,7 +377,8 @@ void initializeRogue(uint64_t seed) {
     rogue.gold = 0;
     rogue.goldGenerated = 0;
     rogue.disturbed = false;
-    rogue.autoPlayingLevel = false;
+    rogue.autoPlayingLevel = robotPlayer;
+    rogue.robotPlayer = robotPlayer;
     rogue.automationActive = false;
     rogue.justRested = false;
     rogue.justSearched = false;
@@ -1045,15 +1047,32 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
     item *theItem;
     char recordingFilename[BROGUE_FILENAME_MAX] = {0};
 
+    fprintf(stderr, "RogueMain::gameOver -- %s\n", killedBy);
+
     if (player.bookkeepingFlags & MB_IS_DYING) {
         // we've already been through this once; let's avoid overkill.
         return;
     }
 
     player.bookkeepingFlags |= MB_IS_DYING;
-    rogue.autoPlayingLevel = false;
+    rogue.autoPlayingLevel = rogue.robotPlayer;
     rogue.gameInProgress = false;
     flushBufferToFile();
+
+    // Robot Play Ends with Auto-Recording Save too...
+    if (rogue.robotPlayer) {
+        fprintf(stderr, "RogueMain::gameOver -- end auto play\n");
+        rogue.autoPlayingLevel = false;
+        player.currentHP = 0; // So it shows up empty in the side bar.
+        refreshSideBar(-1, -1, false);
+        rogue.creaturesWillFlashThisTurn = false;
+        rogue.highScoreSaved = true;
+        saveRecordingNoPrompt(recordingFilename);
+        // notifyEvent(GAMEOVER_DEATH, 12345, 0, "Died in vain", recordingFilename);
+        rogue.gameHasEnded = true;
+        rogue.nextGame = NG_NEW_GAME;
+        return;
+    }
 
     if (rogue.playbackFastForward) {
         rogue.playbackFastForward = false;
