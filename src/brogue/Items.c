@@ -6865,7 +6865,7 @@ static void magicMapCell(short x, short y) {
     }
 }
 
-boolean uncurse( item *theItem ) {
+static boolean uncurse( item *theItem ) {
     if (theItem->flags & ITEM_CURSED) {
 
         // Uncurse the item
@@ -6874,7 +6874,7 @@ boolean uncurse( item *theItem ) {
         // Also reduce curse duration if it is equipped
         if (theItem->flags & ITEM_EQUIPPED) {
             // Need to leave 1 tick on the status in case multiple cursed items contributed to the debuf
-            player.status[STATUS_CURSED] = max( 1, player.status[STATUS_CURSED] - CURSED_ITEM_DURATION );
+            player.status[STATUS_CURSED] = max( 1, player.status[STATUS_CURSED] - gameConst->curseDuration );
         }
         return true;
     }
