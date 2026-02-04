@@ -1087,6 +1087,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
         messageWithColor(buf, &badMessageColor, 0);
         displayMoreSignWithoutWaitingForAcknowledgment();
 
+        uiMode = CBrogueGameEventShowEscape; // tablet ui mode
         do {
             if (rogue.playbackMode) break;
             nextBrogueEvent(&theEvent, false, false, false);
@@ -1106,6 +1107,7 @@ void gameOver(char *killedBy, boolean useCustomPhrasing) {
         } while (!(theEvent.eventType == KEYSTROKE && (theEvent.param1 == ACKNOWLEDGE_KEY || theEvent.param1 == ESCAPE_KEY)
                    || theEvent.eventType == MOUSE_UP));
 
+        uiMode = CBrogueGameEventInMenu; // tablet ui mode
         confirmMessages();
 
         rogue.playbackMode = playback;
@@ -1389,7 +1391,7 @@ void enableEasyMode() {
     if (confirm("Succumb to demonic temptation (i.e. enable Easy Mode)?", false)) {
         recordKeystroke(EASY_MODE_KEY, false, true);
         message("An ancient and terrible evil burrows into your willing flesh!", REQUIRE_ACKNOWLEDGMENT);
-        rogue.mode == GAME_MODE_EASY;
+        rogue.mode = GAME_MODE_EASY;
         setPlayerDisplayChar();
         refreshDungeonCell(player.loc);
         refreshSideBar(-1, -1, false);
