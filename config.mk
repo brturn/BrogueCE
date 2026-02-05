@@ -8,7 +8,7 @@ SYSTEM := LINUXLIKE
 TERMINAL := NO
 
 # Include graphical support. Requires SDL2 and SDL2_image
-GRAPHICS := YES
+GRAPHICS := NO
 # Path to sdl2-config script
 SDL_CONFIG := sdl2-config
 
@@ -16,10 +16,13 @@ SDL_CONFIG := sdl2-config
 WEBBROGUE := NO
 
 # Enable debugging mode. See top of Rogue.h for features
-DEBUG := NO
+DEBUG := YES
 
 # Declare this is a release build
 RELEASE := NO
 
 # Configure the executable to run from a macOS .app bundle (only works in graphical mode)
 MAC_APP := NO
+
+# Javascript
+JSBROGUE := YES
