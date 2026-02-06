@@ -54,37 +54,10 @@ ifeq ($(JSBROGUE),YES)
 sources += $(addprefix src/platform/,javascript-platform.c)
 cppflags += -DBROGUE_JS
 cflags += -std=gnu11 -Wbad-function-cast -Wcast-function-type
-CC = emcc -sASYNCIFY 
-#-pthread -sMAIN_MODULE=1
-
-libs += -sASSERTIONS -sSAFE_HEAP -sEXCEPTION_DEBUG -sASYNCIFY 
-#
-# -sLIBRARY_DEBUG 
-#-sALLOW_MEMORY_GROWTH=1 -sALLOW_TABLE_GROWTH -sFULL_ES3=1 -sFORCE_FILESYSTEM=1 
-#-sEXCEPTION_DEBUG -sLIBRARY_DEBUG 
-#-sSYSCALL_DEBUG -sDYLINK_DEBUG -sFS_DEBUG
-
-# LIBRARIES = -sASYNCIFY -sASSERTIONS
+CC = emcc -g 
+#-fsanitize=address -fsanitize=undefined -Wcast-function-type
+libs += -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=33554432 -sASYNCIFY_STACK_SIZE=10240
 .exe = .html
-
-# -s SAFE_HEAP 
-# -s ASSERTIONS=1 
-# -s ALLOW_MEMORY_GROWTH=1 
-# -s PTHREAD_POOL_SIZE=3 
-# -s ASYNCIFY -pthread 
-# -s ASYNCIFY_IMPORTS=['doLoadLibrary'] 
-# -s ALLOW_TABLE_GROWTH
-# -s USE_PTHREADS=1
-# -s PROXY_TO_PTHREAD
-# -s EXPORTED_RUNTIME_METHODS=['FS']
-# -s DYNCALLS=1
-# -s MAIN_MODULE=1
-# -s USE_WEBGL2=1
-# -s FULL_ES3=1
-# -s OFFSCREEN_FRAMEBUFFER=1
-# -s FORCE_FILESYSTEM=1
-# --profiling
-# --pre-js=
 endif
 
 
