@@ -54,9 +54,9 @@ ifeq ($(JSBROGUE),YES)
 sources += $(addprefix src/platform/,javascript-platform.c)
 cppflags += -DBROGUE_JS
 cflags += -std=gnu11 -Wbad-function-cast -Wcast-function-type
-CC = emcc -g 
+CC = emcc -g -O3
 #-fsanitize=address -fsanitize=undefined -Wcast-function-type
-libs += -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=33554432 -sASYNCIFY_STACK_SIZE=10240
+libs += -sASYNCIFY=1 -sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=33554432 -sASYNCIFY_STACK_SIZE=10240 -lidbfs.js -sFORCE_FILESYSTEM
 .exe = .html
 endif
 
@@ -89,6 +89,7 @@ include make/*.mk
 clean:
 	$(warning 'make clean' is no longer needed in many situations, so is not supported. Use 'make -B' to force rebuild something.)
 	rm src/*/*.o
+	rm build/src/*/*.o
 
 escape = $(subst ','\'',$(1))
 vars:

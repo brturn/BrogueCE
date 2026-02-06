@@ -1,3 +1,27 @@
+/*
+*
+* BrogueJS (https://github.com/freethenation)
+*
+* @freethenation (Richard Klafter)
+* @lachesis (Eric Swanson)
+*
+* Copyright (C) 2019 Richard Klafter
+*
+*    This program is free software: you can redistribute it and/or modify
+*    it under the terms of the GNU Affero General Public License as published by
+*    the Free Software Foundation, either version 3 of the License, or
+*    (at your option) any later version.
+*
+*    This program is distributed in the hope that it will be useful,
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*    GNU Affero General Public License for more details.
+*
+*    You should have received a copy of the GNU Affero General Public License
+*    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
+
 #include <emscripten.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,74 +35,52 @@
 
 extern playerCharacter rogue;
 
-boolean useAscii;
+// boolean useAscii;
 static void javascript_gameLoop(void) {
 
-  // register a JS handler to queue mouse & keyboard input
+  // Setup file system
+	EM_ASM( FS.mkdir('/brogue'); );
+
+  // Enter the working directory
+	char *directory = "/brogue";
+	chdir(directory);
+
+  // Mount the directory and load persistent data from browser's IndexedDB
+	EM_ASM(
+    FS.mount(IDBFS, { autoPersist: true }, '/brogue');
+    FS.syncfs(true, function (err) {
+      if (err) {
+        console.error("Failed to load persistent data: ", err);
+      } else {
+        console.log("Persistent data loaded sucessfully!");
+      }
+    })
+	);
+
+  // Register a JS handler to queue mouse & keyboard input
   EM_ASM(
-    var origin = window.location.origin;
+    const origin = window.location.origin;
     window.keyOrMouseEvents = [];
     window.addEventListener('message', function(e){
-      if(origin!==e.origin) return;
+      if (origin !== e.origin) return;
       window.keyOrMouseEvents.push(e.data);
     }, false);
   );
 
-  // detect if we need to translate unicode to ascii... grr safari!
-  useAscii = EM_ASM_INT(
-    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)?1:0;
-  , 0);
+  // // Detect if we need to translate unicode to ascii... grr safari!
+  // useAscii = EM_ASM_INT(
+  //   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent)?1:0;
+  // , 0);
+
   rogueMain();
 }
 
-
-static char glyphToAscii(enum displayGlyph glyph) {
-    unsigned int ch;
-
-    switch (glyph) {
-        case G_UP_ARROW: return '^';
-        case G_DOWN_ARROW: return 'v';
-        case G_FLOOR: return '.';
-        case G_CHASM: return ':';
-        case G_TRAP: return '%';
-        case G_FIRE: return '^';
-        case G_FOLIAGE: return '&';
-        case G_AMULET: return ',';
-        case G_SCROLL: return '?';
-        case G_RING: return '=';
-        case G_WEAPON: return '(';
-        case G_GEM: return '+';
-        case G_TOTEM: return '0'; // zero
-        case G_GOOD_MAGIC: return '$';
-        case G_BAD_MAGIC: return '+';
-        case G_DOORWAY: return '<';
-        case G_CHARM: return '7';
-        case G_GUARDIAN: return '5';
-        case G_WINGED_GUARDIAN: return '5';
-        case G_EGG: return 'o';
-        case G_BLOODWORT_STALK: return '&';
-        case G_FLOOR_ALT: return '.';
-        case G_UNICORN: return 'U';
-        case G_TURRET: return '*';
-        case G_CARPET: return '.';
-        case G_STATUE: return '5';
-        case G_CRACKED_STATUE: return '5';
-        case G_MAGIC_GLYPH: return ':';
-        case G_ELECTRIC_CRYSTAL: return '$';
-
-        default:
-            ch = glyphToUnicode(glyph);
-            brogueAssert(ch < 0x80); // assert ascii
-            return ch;
-    }
-}
-
-static void javascript_plotChar(enum displayGlyph ch,
+static void javascript_plotChar(enum displayGlyph glyph,
         short xLoc, short yLoc,
         short foreRed, short foreGreen, short foreBlue,
         short backRed, short backGreen, short backBlue) {
 
-    ch = glyphToAscii(ch);
+    unsigned int ch = glyphToUnicode(glyph);
 
     EM_ASM_({
     if(!window.plotChars){

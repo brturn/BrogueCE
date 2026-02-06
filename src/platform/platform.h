@@ -4,11 +4,9 @@
 #define U_FOUR_DOTS  0x2237
 #define U_DIAMOND  0x25c7
 #define U_FLIPPED_V  0x22CF
-#define U_ARIES  0x2648
 #define U_ESZETT  0x00df
 #define U_ANKH  0x2640
 #define U_MUSIC_NOTE  0x266A
-#define U_CIRCLE  0x26AA
 #define U_LIGHTNING_BOLT  0x03DF
 #define U_FILLED_CIRCLE  0x25cf
 #define U_NEUTER  0x26b2
@@ -21,7 +19,16 @@
 #define U_OMEGA  0x03A9
 #define U_CIRCLE_BARS  0x29F2
 #define U_FILLED_CIRCLE_BARS  0x29F3
+
+#ifdef BROGUE_JS
+#define U_LEFT_TRIANGLE 0x25C4
+#define U_CIRCLE 0x25CB
+#define U_ARIES 0x03A8
+#else
 #define U_LEFT_TRIANGLE 0x1F780
+#define U_CIRCLE  0x26AA
+#define U_ARIES  0x2648
+#endif
 
 // #define U_UP_TRIANGLE  0x2206
 // #define U_DOWN_TRIANGLE  0x2207
