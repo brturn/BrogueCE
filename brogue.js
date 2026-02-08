@@ -5083,12 +5083,12 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  873360: ($0) => { var nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
- 873540: () => { FS.mkdir('/brogue'); },  
- 873561: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }) },  
- 873778: () => { const origin = window.location.origin; window.keyOrMouseEvents = []; window.addEventListener('message', function(e){ if (origin !== e.origin) return; window.keyOrMouseEvents.push(e.data); }, false); },  
- 873977: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 874033: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { if(!window.plotChars){ setTimeout(function(){ window.parent.postMessage(Object.values(window.plotChars), '*'); window.plotChars = null; },0); window.plotChars = {}; } window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+  873392: ($0) => { var nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
+ 873572: () => { FS.mkdir('/brogue'); },  
+ 873593: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }) },  
+ 873810: () => { const origin = window.location.origin; window.keyOrMouseEvents = []; window.addEventListener('message', function(e){ if (origin !== e.origin) return; window.keyOrMouseEvents.push(e.data); }, false); },  
+ 874009: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
+ 874065: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { if(!window.plotChars){ setTimeout(function(){ window.parent.postMessage(Object.values(window.plotChars), '*'); window.plotChars = null; },0); window.plotChars = {}; } window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
