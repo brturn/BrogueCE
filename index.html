@@ -2,8 +2,9 @@
 
   BrogueJS (https://github.com/freethenation)
 
-  @freethenation (Richard Klafter)
-  @lachesis (Eric Swanson)
+  @freethenation (Richard Klafter, 2019)
+  @lachesis      (Eric Swanson,    2019)
+  @brturn        (Bryan Turner,    2026)
 
   Copyright (C) 2019 Richard Klafter
 
@@ -56,7 +57,7 @@
                 float: right;
                 padding-right: 15px;
             }
-            #project-info #request-fullscreen{
+            #project-info #left-nav{
                 float: left;
                 padding-left: 15px;
             }
@@ -66,11 +67,57 @@
                 align-content: stretch;
                 align-items: stretch;
             }
+            div {
+              margin: 2px;
+            }
+            span {
+              height: 100%;
+            }
+            img.delete {
+              max-width: 1.5em;
+              max-height: 1.5em;
+              margin: 2px;
+            }
+            img.download {
+              max-width: 1.5em;
+              max-height: 1.5em;
+              margin: 2px;
+            }
+            .close {
+              font-style: normal;
+              text-decoration-line: none;
+            }
+            .list-item {
+              display: flex;
+              align-items: center;
+              height: 2em;
+            }
+            .item-text {
+              display: flex;
+              align-items: center;
+              height: 100%;
+              padding-left: 0.5em;
+            }
+            .floating-div {
+                position: fixed;
+                top: 2em;
+                left: 10%;
+                width: 40%;
+                height: 30%;
+                overflow-y: auto;
+                background-color: #333333;
+                border: 1px solid black;
+                padding: 10px;
+                z-index: -1000;
+                color: white;
+            }
         </style>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
         <script type="text/javascript">
             let ctx, ctxWidth, ctxHeight, cellWidth, cellHeight;
             const origin = window.location.origin;
+            const CONSOLE_HEIGHT = 34;
+            const CONSOLE_WIDTH = 100;
             const eventTypes = {
                 KEYSTROKE:0,
                 MOUSE_UP:1,
@@ -110,7 +157,7 @@
                     ctx.fillStyle = `rgb(${br/100*255|0}, ${bg/100*255|0}, ${bb/100*255|0})`
                     ctx.fillRect(x,y,cellWidth,cellHeight)
                     ctx.fillStyle = `rgb(${fr/100*255|0}, ${fg/100*255|0}, ${fb/100*255|0})`
-                    ctx.fillText(String.fromCharCode(char), x, y); //brogue console is 100x34
+                    ctx.fillText(String.fromCharCode(char), x, y);
                 });
             }
             function  getMousePos(canvas, evt) {
@@ -175,23 +222,28 @@
                 e.preventDefault();
             }
 
-            function onRequestFullscreen(){
+            function onRequestFullscreen() {
                 const ele = document.getElementById('game-canvas');
                 if (ele) (ele.requestFullscreen || ele.webkitRequestFullscreen || ele.mozRequestFullScreen || ele.msRequestFullscreen).call(ele);
             }
 
-            //brogue console is 100x34
+            function onRequestFiles() {
+                readDatabase();
+                document.getElementById('file-manager').style.zIndex = 1000;
+            }
+
             $(function(){
                 const canvas = document.getElementById('game-canvas');
                 ctx = canvas.getContext("2d");
                 ctxWidth = ctx.canvas.clientWidth;
                 ctxHeight = ctx.canvas.clientHeight;
-                cellWidth = ctxWidth/100;
-                cellHeight = ctxHeight/34;
+                cellWidth = ctxWidth/CONSOLE_WIDTH;
+                cellHeight = ctxHeight/CONSOLE_HEIGHT;
                 ctx.fillRect(0, 0, ctxWidth, ctxHeight);
                 ctx.textBaseline = "top";
                 ctx.fillStyle = 'white';
-                //find proper font size
+
+                // Find proper font size
                 ctx.font = '10px monospace';
                 for (i = 7; i < 20; i++) {
                     ctx.font = i+'px monospace';
@@ -200,34 +252,188 @@
                         break;
                     }
                 }
-                //canvas has strange interactions with CSS so we do alot of the styling after canvas is initalized
+
+                // Canvas has strange interactions with CSS so we do alot of the styling after canvas is initalized
                 document.getElementsByTagName('body')['0'].className = "initalized"
-                //reg for events
+
+                // Register event handlers
                 window.addEventListener('message', onMessage, false);
                 window.addEventListener('keydown', onKeydown, false);
                 document.getElementById('game-canvas').addEventListener('mousedown', onMouseDown, false);
                 document.getElementById('game-canvas').addEventListener('mouseup', onMouseUp, false);
                 document.getElementById('game-canvas').addEventListener('mousemove', throttle(onMouseMove, 100), false);
                 document.getElementById('request-fullscreen').addEventListener('click', onRequestFullscreen, false);
-
-                // Testing scroll disable on mobile
-                window.addEventListener('touchmove', preventDefault, { passive: false }); // mobile
-                window.addEventListener('scroll', function () { window.scrollTo(0, 0); });
-
-                document.body.addEventListener('touchmove', preventDefault, { passive: false });
-                document.body.setAttribute('style','overflow:hidden;');
-
-                document.getElementById('game-canvas').addEventListener('touchmove', preventDefault, { passive: false }); // mobile
-                document.getElementById('game-canvas').addEventListener('scroll', function () { window.scrollTo(0, 0); });
+                document.getElementById('request-files').addEventListener('click', onRequestFiles, false);
+                document.getElementById('file-input').addEventListener("change", handleFiles);
             })
-        </script>
+
+            // File Manager
+            const STORE_NAME = "FILE_DATA";
+            const PATH = "/brogue/";
+            let db = null;
+
+            function downloadFile(uint8Array, filename, contentType) {
+              const blob = new Blob([uint8Array], { type: contentType });
+              const exportUrl = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              document.body.appendChild(a); // Append link to body to ensure it's clickable in all browsers
+
+              a.href = exportUrl;
+              a.download = filename; // The 'download' attribute suggests a filename
+              a.target = "_self"; // Open in the same tab
+              a.click();
+
+              document.body.removeChild(a);
+              URL.revokeObjectURL(exportUrl);
+            }
+
+            function requestFileForDownload(fileName) {
+              const transaction = db.transaction([STORE_NAME], "readonly");
+              const objectStore = transaction.objectStore(STORE_NAME);
+              const request = objectStore.get(PATH+fileName);
+              request.onerror = (event) => {
+                // Handle errors!
+              };
+              request.onsuccess = (event) => {
+                downloadFile(request.result.contents, fileName, "text/plain"); 
+              };
+            }
+
+
+            function requestDeleteFile(fileName, ele) {
+              const transaction = db.transaction([STORE_NAME], "readwrite");
+              const objectStore = transaction.objectStore(STORE_NAME);
+              const request = objectStore.delete(PATH+fileName);
+              request.onerror = (event) => {
+                // Handle errors!
+              };
+              request.onsuccess = (event) => {
+                ele.parentNode.removeChild(ele);
+              };
+            }
+
+            function requestWriteFile(fileName, fileData) {
+              const transaction = db.transaction([STORE_NAME], "readwrite");
+              const objectStore = transaction.objectStore(STORE_NAME);
+
+              const newFile = {
+                contents: new Uint8Array(fileData),
+                mode: 0o100666,
+                timestamp: new Date(),
+              };
+              const request = objectStore.add(newFile, PATH+fileName);
+              request.onsuccess = (event) => {
+                console.log("Data added successfully", event.target.result);
+                const FILES = document.getElementById("file-manager");
+                addFileListItem(FILES,fileName);
+              };
+              request.onerror = (event) => {
+                console.error("Error adding data:", event.target.error);
+              };
+            }
+
+            function addFileListItem(FILES, fileName) {
+              fileName = fileName.replaceAll(PATH,"");
+              const a = document.createElement("div");
+              a.className = "list-item";
+
+              const del = document.createElement("img");
+              del.src = "delete.svg";
+              del.className = "delete";
+              del.addEventListener("click",() => requestDeleteFile(fileName, a));
+              a.appendChild(del)
+
+              const save = document.createElement("img");
+              save.src = "download.svg";
+              save.className = "download";
+              save.addEventListener("click",() => requestFileForDownload(fileName));
+              a.appendChild(save);
+
+              const txt = document.createElement("span");
+              txt.className = "item-text";
+              txt.textContent = fileName;
+              a.appendChild(txt)
+              FILES.appendChild(a); // Append link to body to ensure it's clickable in all browsers
+            }
+
+            function listAllObjects() {
+              const transaction = db.transaction([STORE_NAME], "readonly");
+              const objectStore = transaction.objectStore(STORE_NAME);
+              const allKeysReq = objectStore.getAllKeys();
+              allKeysReq.onsuccess = function(event) {
+                const allKeys = event.target.result;
+                const FILES = document.getElementById("file-manager");
+                allKeys.forEach(key => {
+                  addFileListItem(FILES, key);
+                });
+              };
+
+              allKeysReq.onerror = function(event) {
+                console.error("Error retrieving all objects:", event.target.error);
+              };
+
+              // Optional: monitor the transaction completion
+              transaction.oncomplete = function() {
+                console.log("Transaction completed.");
+              };
+            }
+
+            // IndexedDB
+            function readDatabase() {
+              // Let us open our database
+              const request = window.indexedDB.open("/brogue");
+              request.onerror = (event) => {
+                console.error("Why didn't you allow my web app to use IndexedDB?!");
+              };
+              request.onsuccess = (event) => {
+                db = event.target.result;
+                db.onerror = (event) => {
+                  // Generic error handler for all errors targeted at this database's requests!
+                  console.error(`Database error: ${event.target.error?.message}`);
+                };
+
+                listAllObjects();
+              };
+            }
+
+            function handleFiles() {
+              const selectedFiles = this.files; // This is a FileList object
+
+              if (selectedFiles.length > 0) {
+                const firstFile = selectedFiles[0];
+                const reader = new FileReader();
+
+                // Define what to do when the file is loaded
+                reader.onload = function(event) {
+                  const fileContent = event.target.result;
+                  console.log('File content (as text):', fileContent);
+                  requestWriteFile(firstFile.name, fileContent);
+                };
+
+                // Read the file content
+                reader.readAsArrayBuffer(firstFile);
+              }
+            }
+      </script>
     </head>
     <body oncontextmenu="return false;">
         <div id="project-info">
             Report any issues to <a href="https://github.com/tmewett/BrogueCE" target="_blank" rel="noopener noreferrer">BrogueCE</a>.
-            <a href="#" id="request-fullscreen">Fullscreen</a>
-            <a href="#" class="close" onclick="this.parentElement.style.display='none';">X</a>
+            <div id="left-nav">
+                <a href="#" id="request-fullscreen">Fullscreen</a>
+                --
+                <a href="#" id="request-files">Files</a>
+            </div>
+            <a href="#" class="close" onclick="this.parentElement.style.display='none';">[X]</a>
         </div>
+        <div id="file-manager" class="floating-div">
+            <a href="#" class="close" onclick="this.parentElement.style.zIndex=-1000;">[X]&nbsp;&nbsp;</a>
+            <span>File Manager - upload, download, or delete save files and recordings</span>
+            <hr/>
+            Add new file: <input type="file" id="file-input" accept=".broguerec, .broguesave">
+            <hr/>
+        </div>
+        <!-- Canvas size enforces tile aspect ratio 10px wide 19px high -->
         <canvas id="game-canvas" width="1000px" height="646px"></canvas>
         <iframe id="game-frame" src="brogue.html"></iframe>
     </body>
