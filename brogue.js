@@ -4598,11 +4598,11 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  873232: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
- 873414: () => { FS.mkdir('/brogue'); },  
- 873435: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
- 873653: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 873709: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+  873376: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
+ 873558: () => { FS.mkdir('/brogue'); },  
+ 873579: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
+ 873797: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
+ 873853: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
