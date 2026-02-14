@@ -4602,7 +4602,7 @@ var ASM_CONSTS = {
  873414: () => { FS.mkdir('/brogue'); },  
  873435: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
  873653: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 873709: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotAllChars(); window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+ 873709: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { window.plotChars[($1<<8)+$2] = ([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
