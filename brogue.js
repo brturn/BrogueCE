@@ -32,7 +32,7 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 // include: javascript/init-mod.js
 const urlParams = new URLSearchParams(window.location.search);
 let seed = urlParams.get('seed') || urlParams.get('s');
-if (seed == 'tuesday') seed = getMostRecentTuesday(); // r/brogue Tuesday contest seed generator
+if (seed !== null && seed.includes('tuesday')) seed = getMostRecentTuesday(); // r/brogue Tuesday contest seed generator
 
 const variant = urlParams.get('variant'); // rapid_brogue, bullet_brogue
 const stealth = urlParams.get('stealth');
