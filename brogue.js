@@ -4605,17 +4605,18 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  873408: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
- 873590: () => { FS.mkdir('/brogue'); },  
- 873611: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
- 873829: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 873885: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+  873392: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
+ 873574: () => { FS.mkdir('/brogue'); },  
+ 873595: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
+ 873813: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
+ 873869: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
 var _free,
   _malloc,
   _main,
+  _saveState,
   _javascript_receiveNextKeyOrMouseEvent,
   __emscripten_stack_restore,
   __emscripten_stack_alloc,
@@ -4642,6 +4643,7 @@ function assignWasmExports(wasmExports) {
   _free = wasmExports['free'];
   _malloc = wasmExports['malloc'];
   _main = Module['_main'] = wasmExports['__main_argc_argv'];
+  _saveState = Module['_saveState'] = wasmExports['saveState'];
   _javascript_receiveNextKeyOrMouseEvent = Module['_javascript_receiveNextKeyOrMouseEvent'] = wasmExports['javascript_receiveNextKeyOrMouseEvent'];
   __emscripten_stack_restore = wasmExports['_emscripten_stack_restore'];
   __emscripten_stack_alloc = wasmExports['_emscripten_stack_alloc'];
