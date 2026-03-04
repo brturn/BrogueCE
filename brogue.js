@@ -54,6 +54,21 @@ if (noEffects != null) Module.arguments.push("--no-effects");
 if (wizard    != null) Module.arguments.push("--wizard");
 if (graphics  != null) Module.arguments.push("--graphics");
 if (hybrid    != null) Module.arguments.push("--hybrid");
+
+const PRE_RUN = "preRun";
+if (!Module[PRE_RUN]) Module[PRE_RUN] = [];
+
+Module[PRE_RUN].push(function() {
+    console.log("Starting FS load...");
+    // addRunDependency('syncfs');
+    FS.mkdir('/brogue');
+    FS.mount(IDBFS, { autoPersist: true }, '/brogue');
+    FS.syncfs(true, function (err) {
+      if (err) throw err;
+      // removeRunDependency('syncfs');
+      console.log("FS loaded from IndexedDB");
+    })
+});
 // end include: javascript/init-mod.js
 
 
@@ -4605,11 +4620,14 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  873392: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
- 873574: () => { FS.mkdir('/brogue'); },  
- 873595: () => { FS.mount(IDBFS, { autoPersist: true }, '/brogue'); FS.syncfs(true, function (err) { if (err) { console.error("Failed to load persistent data: ", err); } else { console.log("Persistent data loaded sucessfully!"); } }); },  
- 873813: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 873869: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+  873536: ($0) => { FS.syncfs($0, function(err) { if (err) { console.warn("Error syncing files:", err); } else { console.log("FS synced IndexedDB"); } }); },  
+ 873675: () => { uiModeInMenu() },  
+ 873690: () => { uiModeShowEscape() },  
+ 873709: ($0) => { uiModeShowKeyboardAndEscape($0) },  
+ 873743: () => { uiModeInNormalPlay() },  
+ 873764: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
+ 873946: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
+ 874002: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
@@ -4617,6 +4635,7 @@ var _free,
   _malloc,
   _main,
   _saveState,
+  _loadFileSystem,
   _javascript_receiveNextKeyOrMouseEvent,
   __emscripten_stack_restore,
   __emscripten_stack_alloc,
@@ -4644,6 +4663,7 @@ function assignWasmExports(wasmExports) {
   _malloc = wasmExports['malloc'];
   _main = Module['_main'] = wasmExports['__main_argc_argv'];
   _saveState = Module['_saveState'] = wasmExports['saveState'];
+  _loadFileSystem = Module['_loadFileSystem'] = wasmExports['loadFileSystem'];
   _javascript_receiveNextKeyOrMouseEvent = Module['_javascript_receiveNextKeyOrMouseEvent'] = wasmExports['javascript_receiveNextKeyOrMouseEvent'];
   __emscripten_stack_restore = wasmExports['_emscripten_stack_restore'];
   __emscripten_stack_alloc = wasmExports['_emscripten_stack_alloc'];
