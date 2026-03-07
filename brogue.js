@@ -4620,14 +4620,14 @@ if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 // end include: postlibrary.js
 
 var ASM_CONSTS = {
-  873536: ($0) => { FS.syncfs($0, function(err) { if (err) { console.warn("Error syncing files:", err); } else { console.log("FS synced IndexedDB"); } }); },  
- 873675: () => { uiModeInMenu() },  
- 873690: () => { uiModeShowEscape() },  
- 873709: ($0) => { uiModeShowKeyboardAndEscape($0) },  
- 873743: () => { uiModeInNormalPlay() },  
- 873764: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
- 873946: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
- 874002: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
+  873648: ($0) => { FS.syncfs($0, function(err) { if (err) { console.warn("Error syncing files:", err); } else { console.log("FS synced IndexedDB"); } }); },  
+ 873787: () => { uiModeInMenu() },  
+ 873802: () => { uiModeShowEscape() },  
+ 873821: ($0) => { uiModeShowKeyboardAndEscape($0) },  
+ 873855: () => { uiModeInNormalPlay() },  
+ 873876: ($0) => { const nxt = window.keyOrMouseEvents.shift(); if(nxt){ _javascript_receiveNextKeyOrMouseEvent.apply(null, nxt); } else { _javascript_receiveNextKeyOrMouseEvent($0, 0, 0, 0, 0); } },  
+ 874058: () => { return Math.min(window.keyOrMouseEvents.length, 1); },  
+ 874114: ($0, $1, $2, $3, $4, $5, $6, $7, $8) => { plotChar([$0,$1,$2,$3,$4,$5,$6,$7,$8]); }
 };
 
 // Imports from the Wasm binary.
