@@ -763,12 +763,12 @@ void resizeWindow(int width, int height) {
     if (fullScreen) {
         if (!(SDL_GetWindowFlags(Win) & SDL_WINDOW_FULLSCREEN)) {
             // switch to fullscreen mode
-            if (SDL_SetWindowFullscreen(Win, true)) sdlfatal(__FILE__, __LINE__);
+            if (!SDL_SetWindowFullscreen(Win, true)) sdlfatal(__FILE__, __LINE__);
         }
     } else {
         if (SDL_GetWindowFlags(Win) & SDL_WINDOW_FULLSCREEN) {
             // switch to windowed mode
-            if (SDL_SetWindowFullscreen(Win, false)) sdlfatal(__FILE__, __LINE__);
+            if (!SDL_SetWindowFullscreen(Win, false)) sdlfatal(__FILE__, __LINE__);
         } else {
             // what is the current size?
             SDL_GetWindowSize(Win, &windowWidth, &windowHeight);
