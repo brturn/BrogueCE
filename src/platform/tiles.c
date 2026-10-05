@@ -731,7 +731,7 @@ void resizeWindow(int width, int height) {
     if (displays == NULL || displayCount <= 0) sdlfatal(__FILE__, __LINE__);
 
     // Just use the first display
-    SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(*displays);
+    const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(*displays);
     if (!mode) sdlfatal(__FILE__, __LINE__);
 
     // By default the window will have an aspect ratio of 16:10
@@ -757,7 +757,7 @@ void resizeWindow(int width, int height) {
         SDL_DestroySurface(icon);
 
         // Enable text input events for the window
-        SDL_StartTextInput(Win);
+        // SDL_StartTextInput(Win);
     }
 
     if (fullScreen) {
