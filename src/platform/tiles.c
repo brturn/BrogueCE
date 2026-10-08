@@ -609,16 +609,30 @@ void updateScreen() {
 
     SDL_Renderer *renderer = SDL_GetRenderer(Win);
     if (!renderer) {
-        renderer = SDL_CreateRenderer(Win, NULL);
+
+        // ------------------
+        // Debug info
+        fprintf(stderr, "\nAvailable SDL3 Render Drivers:\n");
+        int maxIdx = SDL_GetNumRenderDrivers();
+        for (int i = 0; i < maxIdx; i++) {
+            const char *name = SDL_GetRenderDriver(i);
+            fprintf(stderr, "%d: %s\n", i, name);
+        }
+        // ------------------
+
+        renderer = SDL_CreateRenderer(Win, (softwareRendering ? "software" : NULL));
         if (!renderer) sdlfatal(__FILE__, __LINE__);
 
         if (!SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE)) sdlfatal(__FILE__, __LINE__);
 
         // see if we ended up using the software renderer or not
-        // SDL_RendererInfo info;
-        // if (SDL_GetRendererInfo(renderer, &info) < 0) sdlfatal(__FILE__, __LINE__);
-        // softwareRendering = (strcmp(info.name, "software") == 0);
-        softwareRendering = false;
+        const char *rendererName = SDL_GetRendererName(renderer);
+        softwareRendering = (strcmp(rendererName, "software") == 0);
+
+        // ------------------
+        // Debug info
+        fprintf(stderr, "-----\nSelected driver: %s\n", rendererName);
+        // ------------------
     }
 
     int outputWidth, outputHeight;
