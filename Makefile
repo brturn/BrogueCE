@@ -6,11 +6,11 @@ cflags := -Isrc/brogue -Isrc/platform -Isrc/variants -std=c99 \
 libs := -lm
 cppflags := -DDATADIR=$(DATADIR)
 
-sources := $(wildcard src/brogue/*.c) $(wildcard src/variants/*.c) $(addprefix src/platform/,main.c platformdependent.c null-platform.c)
+sources := $(wildcard src/brogue/*.c) $(wildcard src/variants/*.c) $(addprefix src/platform/,main.c platformdependent.c null-platform.c) external/cJSON/cJSON.c
 objects :=
 
 ifeq ($(SYSTEM),WINDOWS)
-objects += windows/icon.o
+objects += windows/resources.o
 .exe := .exe
 endif
 
@@ -83,7 +83,7 @@ vars:
 # Write the value to a temporary file and only overwrite if it's different.
 vars/%: vars FORCE
 	@echo '$(call escape,$($*))' > vars/$*.tmp
-	@if cmp --quiet vars/$*.tmp vars/$*; then :; else cp vars/$*.tmp vars/$*; fi
+	@if ! cmp --quiet vars/$*.tmp vars/$*; then cp vars/$*.tmp vars/$*; fi
 
 
 FORCE:

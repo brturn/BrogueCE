@@ -57,7 +57,7 @@
  * strength penalty/benefit) increases
  */
 
-fixpt strengthModifier(item *theItem) {
+fixpt strengthModifier(const item *theItem) {
     int difference = (rogue.strength - player.weaknessAmount) - theItem->strengthRequired;
     if (difference > 0) {
         return difference * FP_FACTOR / 4; // 0.25x
@@ -66,7 +66,7 @@ fixpt strengthModifier(item *theItem) {
     }
 }
 
-fixpt netEnchant(item *theItem) {
+fixpt netEnchant(const item *theItem) {
     fixpt retval = theItem->enchant1 * FP_FACTOR;
     if (theItem->category & (WEAPON | ARMOR)) {
         retval += strengthModifier(theItem);
@@ -102,7 +102,7 @@ short monsterAccuracyAdjusted(const creature *monst) {
 
 // does NOT account for auto-hit from sleeping or unaware defenders; does account for auto-hit from
 // stuck or captive defenders and from weapons of slaying.
-short hitProbability(creature *attacker, creature *defender) {
+short hitProbability(const creature *attacker, const creature *defender) {
     short accuracy = monsterAccuracyAdjusted(attacker);
     short defense = monsterDefenseAdjusted(defender);
     short hitProbability;
@@ -133,7 +133,7 @@ short hitProbability(creature *attacker, creature *defender) {
     return hitProbability;
 }
 
-boolean attackHit(creature *attacker, creature *defender) {
+boolean attackHit(const creature *attacker, const creature *defender) {
     // automatically hit if the monster is sleeping or captive or stuck in a web
     if (defender->status[STATUS_STUCK]
         || defender->status[STATUS_PARALYZED]
@@ -145,7 +145,7 @@ boolean attackHit(creature *attacker, creature *defender) {
     return rand_percent(hitProbability(attacker, defender));
 }
 
-static void addMonsterToContiguousMonsterGrid(short x, short y, creature *monst, char grid[DCOLS][DROWS]) {
+static void addMonsterToContiguousMonsterGrid(short x, short y, const creature *monst, char grid[DCOLS][DROWS]) {
     short newX, newY;
     enum directions dir;
     creature *tempMonst;
@@ -164,16 +164,63 @@ static void addMonsterToContiguousMonsterGrid(short x, short y, creature *monst,
     }
 }
 
+static short alliedCloneCount(const creature *monst) {
+    short count = 0;
+    for (creatureIterator it = iterateCreatures(monsters); hasNextCreature(it);) {
+        creature *temp = nextCreature(&it);
+        if (temp != monst
+            && temp->info.monsterID == monst->info.monsterID
+            && monstersAreTeammates(temp, monst)) {
+
+            count++;
+        }
+    }
+    if (rogue.depthLevel > 1) {
+        for (creatureIterator it = iterateCreatures(&levels[rogue.depthLevel - 2].monsters); hasNextCreature(it);) {
+            creature *temp = nextCreature(&it);
+            if (temp != monst
+                && temp->info.monsterID == monst->info.monsterID
+                && monstersAreTeammates(temp, monst)) {
+
+                count++;
+            }
+        }
+    }
+    if (rogue.depthLevel < gameConst->deepestLevel) {
+        for (creatureIterator it = iterateCreatures(&levels[rogue.depthLevel].monsters); hasNextCreature(it);) {
+            creature *temp = nextCreature(&it);
+            if (temp != monst
+                && temp->info.monsterID == monst->info.monsterID
+                && monstersAreTeammates(temp, monst)) {
+
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
 // Splits a monster in half.
 // The split occurs only if there is a spot adjacent to the contiguous
 // group of monsters that the monster would not avoid.
 // The contiguous group is supplemented with the given (x, y) coordinates, if any;
 // this is so that jellies et al. can spawn behind the player in a hallway.
-static void splitMonster(creature *monst, pos loc) {
+void splitMonster(creature *monst, const creature *attacker) {
     char buf[DCOLS * 3];
     char monstName[DCOLS];
     char monsterGrid[DCOLS][DROWS], eligibleGrid[DCOLS][DROWS];
     creature *clone;
+    pos loc = INVALID_POS;
+
+    if ((monst->info.abilityFlags & MA_CLONE_SELF_ON_DEFEND) && alliedCloneCount(monst) < 100
+        && monst->currentHP > 0 && !(monst->bookkeepingFlags & MB_IS_DYING)) {
+
+        if (distanceBetween(monst->loc, attacker->loc) <= 1) {
+            loc = attacker->loc;
+        }
+    } else {
+        return;
+    }
 
     zeroOutGrid(monsterGrid);
     zeroOutGrid(eligibleGrid);
@@ -264,45 +311,9 @@ static void splitMonster(creature *monst, pos loc) {
     }
 }
 
-static short alliedCloneCount(creature *monst) {
-    short count = 0;
-    for (creatureIterator it = iterateCreatures(monsters); hasNextCreature(it);) {
-        creature *temp = nextCreature(&it);
-        if (temp != monst
-            && temp->info.monsterID == monst->info.monsterID
-            && monstersAreTeammates(temp, monst)) {
-
-            count++;
-        }
-    }
-    if (rogue.depthLevel > 1) {
-        for (creatureIterator it = iterateCreatures(&levels[rogue.depthLevel - 2].monsters); hasNextCreature(it);) {
-            creature *temp = nextCreature(&it);
-            if (temp != monst
-                && temp->info.monsterID == monst->info.monsterID
-                && monstersAreTeammates(temp, monst)) {
-
-                count++;
-            }
-        }
-    }
-    if (rogue.depthLevel < gameConst->deepestLevel) {
-        for (creatureIterator it = iterateCreatures(&levels[rogue.depthLevel].monsters); hasNextCreature(it);) {
-            creature *temp = nextCreature(&it);
-            if (temp != monst
-                && temp->info.monsterID == monst->info.monsterID
-                && monstersAreTeammates(temp, monst)) {
-
-                count++;
-            }
-        }
-    }
-    return count;
-}
-
 // This function is called whenever one creature acts aggressively against another in a way that directly causes damage.
 // This can be things like melee attacks, fire/lightning attacks or throwing a weapon.
-void moralAttack(creature *attacker, creature *defender) {
+void moralAttack(const creature *attacker, creature *defender) {
 
     if (defender->currentHP > 0
         && !(defender->bookkeepingFlags & MB_IS_DYING)) {
@@ -311,9 +322,6 @@ void moralAttack(creature *attacker, creature *defender) {
             defender->status[STATUS_PARALYZED] = 0;
              // Paralyzed creature gets a turn to react before the attacker moves again.
             defender->ticksUntilTurn = min(attacker->attackSpeed, 100) - 1;
-        }
-        if (defender->status[STATUS_MAGICAL_FEAR]) {
-            defender->status[STATUS_MAGICAL_FEAR] = 1;
         }
         defender->status[STATUS_ENTRANCED] = 0;
 
@@ -336,14 +344,6 @@ void moralAttack(creature *attacker, creature *defender) {
 
             alertMonster(defender); // this alerts the monster that you're nearby
         }
-
-        if ((defender->info.abilityFlags & MA_CLONE_SELF_ON_DEFEND) && alliedCloneCount(defender) < 100) {
-            if (distanceBetween(defender->loc, attacker->loc) <= 1) {
-                splitMonster(defender, attacker->loc);
-            } else {
-                splitMonster(defender, INVALID_POS);
-            }
-        }
     }
 }
 
@@ -351,7 +351,7 @@ void moralAttack(creature *attacker, creature *defender) {
 /// to deal direct damage to a non-hunting creature that they are aware of and the creature would be damaged by the attack.
 /// @param attacker 
 /// @param defender 
-void handlePaladinFeat(creature *defender) {
+void handlePaladinFeat(const creature *defender) {
     if (rogue.featRecord[FEAT_PALADIN]
         && defender->creatureState != MONSTER_TRACKING_SCENT
         && (player.status[STATUS_TELEPATHIC] || canSeeMonster(defender))
@@ -363,7 +363,7 @@ void handlePaladinFeat(creature *defender) {
     }
 }
 
-static boolean playerImmuneToMonster(creature *monst) {
+static boolean playerImmuneToMonster(const creature *monst) {
     if (monst != &player
         && rogue.armor
         && (rogue.armor->flags & ITEM_RUNIC)
@@ -414,12 +414,6 @@ static void specialHit(creature *attacker, creature *defender, short damage) {
             player.status[STATUS_HALLUCINATING] += gameConst->onHitHallucinateDuration;
             player.maxStatus[STATUS_HALLUCINATING] = max(player.maxStatus[STATUS_HALLUCINATING], player.status[STATUS_HALLUCINATING]);
         }
-        if (attacker->info.abilityFlags & MA_HIT_BURN
-             && !defender->status[STATUS_IMMUNE_TO_FIRE]) {
-
-            exposeCreatureToFire(defender);
-        }
-
         if (attacker->info.abilityFlags & MA_HIT_STEAL_FLEE
             && !(attacker->carriedItem)
             && (packItems->nextItem)
@@ -475,6 +469,9 @@ static void specialHit(creature *attacker, creature *defender, short damage) {
             }
         }
     }
+    if (attacker->info.abilityFlags & MA_HIT_BURN) {
+        exposeCreatureToFire(defender);
+    }
     if ((attacker->info.abilityFlags & MA_POISONS)
         && damage > 0
         && !(defender->info.flags & (MONST_INANIMATE | MONST_INVULNERABLE))) {
@@ -492,7 +489,7 @@ static void specialHit(creature *attacker, creature *defender, short damage) {
     }
 }
 
-static boolean forceWeaponHit(creature *defender, item *theItem) {
+static boolean forceWeaponHit(creature *defender, const item *theItem) {
     short forceDamage;
     char buf[DCOLS*3], buf2[COLS], monstName[DCOLS];
     creature *otherMonster = NULL;
@@ -556,16 +553,17 @@ static boolean forceWeaponHit(creature *defender, item *theItem) {
             }
         }
         moralAttack(&player, defender);
+        splitMonster(defender, &player);
 
         if (otherMonster
-            && !(defender->info.flags & (MONST_IMMUNE_TO_WEAPONS | MONST_INVULNERABLE))) {
+            && !(otherMonster->info.flags & (MONST_IMMUNE_TO_WEAPONS | MONST_INVULNERABLE))) {
 
             if (inflictDamage(NULL, otherMonster, forceDamage, &white, false)) {
                 if (canDirectlySeeMonster(otherMonster)) {
                     sprintf(buf, "%s %s%s when %s slams into $HIMHER",
                             buf2,
                             (knowFirstMonsterDied ? "also " : ""),
-                            (defender->info.flags & MONST_INANIMATE) ? "is destroyed" : "dies",
+                            (otherMonster->info.flags & MONST_INANIMATE) ? "is destroyed" : "dies",
                             monstName);
                     resolvePronounEscapes(buf, otherMonster);
                     buf[DCOLS] = '\0';
@@ -577,6 +575,7 @@ static boolean forceWeaponHit(creature *defender, item *theItem) {
             if (otherMonster->creatureState != MONSTER_ALLY) {
                 // Allies won't defect if you throw another monster at them, even though it hurts.
                 moralAttack(&player, otherMonster);
+                splitMonster(otherMonster, &player);
             }
         }
     }
@@ -678,7 +677,7 @@ void magicWeaponHit(creature *defender, item *theItem, boolean backstabbed) {
 
                 for (i = 0; i < (weaponImageCount(enchant)); i++) {
                     newMonst = generateMonster(MK_SPECTRAL_IMAGE, true, false);
-                    getQualifyingPathLocNear(&(newMonst->loc.x), &(newMonst->loc.y), defender->loc.x, defender->loc.y, true,
+                    newMonst->loc = getQualifyingPathLocNear(defender->loc, true,
                                              T_DIVIDES_LEVEL & avoidedFlagsForMonster(&(newMonst->info)), HAS_PLAYER,
                                              avoidedFlagsForMonster(&(newMonst->info)), (HAS_PLAYER | HAS_MONSTER | HAS_STAIRS), false);
                     newMonst->bookkeepingFlags |= (MB_FOLLOWER | MB_BOUND_TO_LEADER | MB_DOES_NOT_TRACK_LEADER | MB_TELEPATHICALLY_REVEALED);
@@ -780,7 +779,7 @@ void magicWeaponHit(creature *defender, item *theItem, boolean backstabbed) {
     }
 }
 
-static void attackVerb(char returnString[DCOLS], creature *attacker, short hitPercentile) {
+static void attackVerb(char returnString[DCOLS], const creature *attacker, short hitPercentile) {
     short verbCount, increment;
 
     if (attacker != &player && (player.status[STATUS_HALLUCINATING] || !canSeeMonster(attacker))) {
@@ -991,7 +990,7 @@ static void decrementWeaponAutoIDTimer() {
     }
 }
 
-void processStaggerHit(creature *attacker, creature *defender) {
+void processStaggerHit(const creature *attacker, creature *defender) {
     if ((defender->info.flags & (MONST_INVULNERABLE | MONST_IMMOBILE | MONST_INANIMATE))
         || (defender->bookkeepingFlags & MB_CAPTIVE)
         || cellHasTerrainFlag(defender->loc, T_OBSTRUCTS_PASSABILITY)) {
@@ -1045,9 +1044,6 @@ boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
     }
 
     defender->status[STATUS_ENTRANCED] = 0;
-    if (defender->status[STATUS_MAGICAL_FEAR]) {
-        defender->status[STATUS_MAGICAL_FEAR] = 1;
-    }
 
     if (attacker != &player && defender == &player && attacker->creatureState == MONSTER_WANDERING) {
         attacker->creatureState = MONSTER_TRACKING_SCENT;
@@ -1216,11 +1212,13 @@ boolean attack(creature *attacker, creature *defender, boolean lungeAttack) {
             }
         }
 
+        moralAttack(attacker, defender);
+        
         if (attacker == &player && rogue.weapon && (rogue.weapon->flags & ITEM_RUNIC)) {
             magicWeaponHit(defender, rogue.weapon, sneakAttack || defenderWasAsleep || defenderWasParalyzed);
         }
 
-        moralAttack(attacker, defender);
+        splitMonster(defender, attacker);
 
         if (attacker == &player
             && (defender->bookkeepingFlags & MB_IS_DYING)
@@ -1357,7 +1355,7 @@ void flashMonster(creature *monst, const color *theColor, short strength) {
     }
 }
 
-static boolean canAbsorb(creature *ally, boolean ourBolts[], creature *prey, short **grid) {
+static boolean canAbsorb(const creature *ally, boolean ourBolts[], const creature *prey, short **grid) {
     short i;
 
     if (ally->creatureState == MONSTER_ALLY
@@ -1391,7 +1389,7 @@ static boolean canAbsorb(creature *ally, boolean ourBolts[], creature *prey, sho
     return false;
 }
 
-static boolean anyoneWantABite(creature *decedent) {
+static boolean anyoneWantABite(const creature *decedent) {
     short candidates, randIndex, i;
     short **grid;
     boolean success = false;
@@ -1551,7 +1549,7 @@ boolean inflictDamage(creature *attacker, creature *defender,
     }
 
     if (defender == &player
-        && rogue.easyMode
+        && rogue.mode == GAME_MODE_EASY
         && damage > 0) {
         damage = max(1, damage/5);
     }
@@ -1581,6 +1579,7 @@ boolean inflictDamage(creature *attacker, creature *defender,
     }
 
     if (defender->currentHP <= damage) { // killed
+        defender->currentHP = 0;
         return true;
     } else { // survived
         if (damage < 0 && defender->currentHP - damage > defender->info.maxHP) {

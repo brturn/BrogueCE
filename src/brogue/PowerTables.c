@@ -42,7 +42,7 @@
 
 // game data formulae:
 
-short wandDominate(creature *monst)                 {return (((monst)->currentHP * 5 < (monst)->info.maxHP) ? 100 : \
+short wandDominate(const creature *monst)            {return (((monst)->currentHP * 5 < (monst)->info.maxHP) ? 100 : \
                                                      max(0, 100 * ((monst)->info.maxHP - (monst)->currentHP) / (monst)->info.maxHP));}
 
 // All "enchant" parameters must already be multiplied by FP_FACTOR:
@@ -199,7 +199,21 @@ fixpt defenseFraction(fixpt netDefense) {
         469, 453, 439, 425, 411, 398, 385, 373, 361, 349, 338, 327, 316, 306, 296, 287, 277, 268, 260, 251, 243, 235, 228, 221, 213, 207,
         200, 193, 187, 181, 175, 170, 164, 159, 154, 149, 144, 139, 135, 130, 126, 122, 118, 114, 111, 107, 104, 100, 97, 94};
 
-    short idx = clamp(netDefense * 4 / 10 / FP_FACTOR + 80, 0, LAST_INDEX(POW_DEFENSE_FRACTION));
+    /* Examples of what this code does for different armor values:
+    (Using floating point instead of fixed point, and using small armor values, for clarity)
+    An armor value of 1.5 results in a netDefense is 15.0.
+    An armor value of 1.75 results in a netDefense of 17.0 (the 0.5 is lost before this function is called).
+    It multiplies by 4, so the last decimal place would be zero if it weren't for the 0.5 being lost (as above).
+        15.0 -> 60.0; 17.0 -> 68.0 (this would be 70 if not for the truncation)
+    It divides by 10: 60.0 -> 6.0, 68.0 -> 6.8
+    It adds 0.5 to compensate for the truncation: 6.0 -> 6.5; 6.8 -> 7.3
+        This could add anywhere from 0.2 to 0.99, but 0.5 seems like the least arbitrary choice.
+        Without this, the step below would round both 6.0 and 6.8 down to 6.
+    It converts to an integer (which rounds towards zero): 6.5 -> 6; 7.3 -> 7
+    It adds 80 (because some of the entries are for negative armor values) and clamps to the size of the table
+        This is the index into the table above.
+    */
+    short idx = clamp((netDefense * 4 / 10 + FP_FACTOR / 2) / FP_FACTOR + 80, 0, LAST_INDEX(POW_DEFENSE_FRACTION));
     return POW_DEFENSE_FRACTION[idx];
 }
 
@@ -217,7 +231,7 @@ short charmRechargeDelay(short charmKind, short enchant) {
     return max(charmEffectTable[charmKind].rechargeDelayMinTurns, delay);
 }
 
-short runicWeaponChance(item *theItem, boolean customEnchantLevel, fixpt enchantLevel) {
+short runicWeaponChance(const item *theItem, boolean customEnchantLevel, fixpt enchantLevel) {
     const fixpt POW_16_RUNIC_DECREMENT[] = { // (1-0.16)^x fixed point, with x from 0 to 50 in increments of 0.25:
         65536, 62740, 60064, 57502, 55050, 52702, 50454, 48302, 46242, 44269, 42381, 40574, 38843, 37186, 35600, 34082, 32628, 31236, 29904,
         28629, 27407, 26238, 25119, 24048, 23022, 22040, 21100, 20200, 19339, 18514, 17724, 16968, 16244, 15551, 14888, 14253, 13645, 13063,
